@@ -1,74 +1,68 @@
-# Technical Specification: Authentication Screen UI
+# Technical Specification: Home Screen UI
 
 ## 1. Executive Summary
 
-This document specifies the design and implementation details for the Authentication feature (Login and Sign Up) within the mobile application. The implementation will combine a dark-themed layout with curved design elements and pill-shaped input fields, closely following provided visual references. The core logic will be consolidated into a single screen, leveraging the existing architecture.
+This document specifies the design and implementation details for the main Home Screen (`app/(tabs)/index.tsx`) of the mobile application. The implementation establishes the primary dashboard the user will see after authenticating, featuring a top header grouped component, categorical task lists, and a custom pill-shaped bottom navigation bar.
 
 ## 2. Requirements
 
 - **Framework:** React Native using Expo, TypeScript.
-- **Scope:** Implement the UI for the Authentication flow, supporting both "Login" and "Sign up" states on the same screen.
-- **Constraints:** No real API calls yet; interface with existing placeholder hooks (`useAuth`).
+- **Scope:** Implement the UI for the Home Screen (`app/(tabs)/index.tsx`).
+- **Data Constraints:** Render the page as a "Zero-State" (New User) experience. No hardcoded mock tasks should be displayed in the lists; instead, empty state messages will be shown for each section. Future logic will be wired to existing placeholder hooks (`hooks/useCategorias.ts`).
 
 ## 3. UI/UX Design
 
 ### Theme & Palette
-- **Background:** Solid Black (`#000000` or very dark gray like `#121212`).
-- **Accent/Foreground:** White (`#FFFFFF`) for the top card, input outlines/backgrounds, and text.
-- **Typography:** Modern sans-serif (system default or Inter if configured), utilizing white text on dark backgrounds and vice-versa.
+- **Background:** Solid Black (`#000000` or `#121212`). The theme continues the dark palette established in the Authentication screens.
+- **Accent/Foreground:** White (`#FFFFFF`) for text, icons, and components needing contrast against the dark background.
+- **Components:** Elements maintain the pill-shaped (fully rounded corners) aesthetic defined globally.
 
-### Layout Details (Reference 1 & 2 Synthesis)
-- **Top Section (White Curved Card):**
-  - A white view spanning the top edge, featuring rounded bottom corners (large border-radius).
-  - Contains the application logo centered (sourced from `assets/image/icon.png` or similar).
-- **Toggle Control:**
-  - Placed below the top card.
-  - Pill-shaped toggle with two segments: "Login" and "Sign up".
-  - Active state has a distinct background (e.g., solid gray/white) and contrasting text color.
-- **Form Fields (Pill-shaped with Icons):**
-  - Text fields must be pill-shaped (fully rounded corners, e.g., `borderRadius: 50`).
-  - Each field includes an icon on the left (e.g., `@expo/vector-icons`).
-  - Colors: Transparent or dark background with a subtle border, white text.
-- **Buttons (Pill-shaped):**
-  - Primary action buttons ("Login" / "Sign up") must be pill-shaped.
-  - Filled style (e.g., solid white with black text, or vice versa depending on contrast).
-- **Social Login Options:**
-  - A separator text placed below the primary action button, styled as: `------ Or login with ------` (lines extending to the sides).
-  - Two pill-shaped, outlined buttons placed side-by-side below the separator.
-  - **Google Button:** Left side, outlined pill shape, containing the Google icon and "Google" text.
-  - **Apple Button:** Right side, outlined pill shape, containing the Apple icon and "Apple" text.
+### Layout Details
+
+**Top Header**
+- Placed at the top left of the screen.
+- Contains a single, horizontally grouped component with:
+  - **Date Badge:** Pill-shaped, dark background with subtle border, white text (e.g., "Sábado, 18").
+  - **Indicator:** A circular colored or white dot positioned immediately next to the date badge.
+  - **Calendar Icon:** Placed directly beside the indicator, completing the top-left group.
+- *Note:* The "quick add" text input and right-aligned icons from the original reference have been explicitly excluded.
+
+**Task Sections ("Manhã", "Hábitos", "Concluídas")**
+- Each section contains a header with the Title and a Counter (e.g., "Manhã · 0").
+- **Zero-State / Empty State:** Since the user has no data yet, each section will render a minimal empty state component with a message like "Nada por aqui ainda", rather than an empty list or fake data.
+- **Task Item Structure (Future-proofing):** The structure for future tasks will consist of a circular checkbox, task name, category tag (icon + text), and time. (A `TaskItem` component may be scaffolded but left unused).
+
+**Bottom Navigation Bar**
+- A custom, floating pill-shaped tab bar at the bottom of the screen.
+- **Icons:** 
+  - Day (Active state, showing icon + "Dia" text).
+  - Wallet.
+  - Document.
+  - Target.
+  - More (`...`) inside a separate, circular button next to the pill.
+- **Implementation:** Will be handled via a custom `tabBar` component inside `app/(tabs)/_layout.tsx`.
 
 ## 4. Architecture & Implementation
 
 ### Routing & Screens
-- **`app/` (Routing & Navigation)**
-  - `index.tsx`: Entry point of the app, MUST redirect the user to `/(auth)/login` immediately so the authentication screen is the first thing they see.
-- **`app/(auth)/login.tsx` (Main Authentication Screen):**
-  - Will house the core UI and logic for both Login and Registration.
-  - Uses a local state (e.g., `const [isLogin, setIsLogin] = useState(true)`) to toggle between modes.
-  - **Login Mode:** Renders Email and Password fields, plus a "Login" button, separator, and social login buttons.
-  - **Sign up Mode:** Renders Username, Email, Password, and Confirm Password fields, plus a "Sign up" button, separator, and social login buttons.
-- **`app/(auth)/register.tsx`:**
-  - Will act as a redirect to `login.tsx` to prevent UI duplication while maintaining the existing routing structure. Can be implemented using Expo Router's `<Redirect />` or a `useEffect` push.
+- **`app/(tabs)/_layout.tsx`:**
+  - Configures the Expo Router `<Tabs>` component to hide the default header and use the custom pill-shaped bottom navigation bar.
+- **`app/(tabs)/index.tsx` (Main Home Screen):**
+  - Renders the `ScrollView` containing the Top Header and the Task Sections.
 
 ### Components
-- **`components/(auth)/AuthInput.tsx`:**
-  - A reusable pill-shaped input component accepting icon names, placeholder, secure text entry, and value/onChange props.
-- **`components/(auth)/AuthToggle.tsx`:**
-  - The pill-shaped toggle switch for "Login" / "Sign up".
-- **`components/shared/PrimaryButton.tsx`:**
-  - A reusable pill-shaped button component (filled style).
-- **`components/shared/SocialButton.tsx`:**
-  - A reusable pill-shaped outlined button component designed specifically for social logins (accepts an icon and title).
-
-### State Management & API (Mock)
-- **`hooks/useAuth.ts`:**
-  - Provide a dummy `signIn` and `signUp` function.
-- The UI components will connect to these hooks but will not perform real HTTP submissions.
+- **`components/(tabs)/TopHeader.tsx`:**
+  - The unified group for Date Badge, Indicator, and Calendar Icon.
+- **`components/(tabs)/SectionHeader.tsx`:**
+  - Reusable header for sections showing `title` and `count`.
+- **`components/(tabs)/EmptyState.tsx`:**
+  - A simple text/view component displaying "Nada por aqui ainda".
+- **`components/(tabs)/CustomTabBar.tsx`:**
+  - The custom pill-shaped bottom navigation layout.
 
 ## 5. Next Steps for Front-End Engineer
 
-1. Build `AuthInput`, `AuthToggle`, and `PrimaryButton` components.
-2. Implement `app/(auth)/login.tsx` adhering to the layout and toggle logic.
-3. Update `app/(auth)/register.tsx` to redirect to `login.tsx`.
-4. Ensure the UI closely matches the dark theme and pill-shaped aesthetic of the references.
+1. Create the custom layout `app/(tabs)/_layout.tsx` and attach `CustomTabBar`.
+2. Build the structural UI components: `TopHeader`, `SectionHeader`, and `EmptyState`.
+3. Construct the main assembly in `app/(tabs)/index.tsx` using the dark mode palette.
+4. Integrate the placeholder lists ensuring counters read "0" and the empty states render appropriately.

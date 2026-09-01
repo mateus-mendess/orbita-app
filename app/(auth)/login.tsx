@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { router } from "expo-router";
 import {
   Image,
   KeyboardAvoidingView,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { AuthInput } from "../../components/(auth)/AuthInput";
@@ -25,6 +27,7 @@ export default function Login() {
   const handleSubmit = () => {
     if (isLogin) {
       console.log("Login attempt", { email, password });
+      router.replace("/(tabs)");
     } else {
       console.log("Signup attempt", {
         username,
@@ -56,9 +59,9 @@ export default function Login() {
 
           {!isLogin && (
             <AuthInput
-              label="Username"
+              label="Name"
               iconName="person-outline"
-              placeholder="Enter your username"
+              placeholder="Enter your name"
               value={username}
               onChangeText={setUsername}
             />
@@ -83,6 +86,15 @@ export default function Login() {
             onChangeText={setPassword}
           />
 
+          {isLogin && (
+            <TouchableOpacity
+              style={styles.forgotPasswordContainer}
+              onPress={() => console.log("Forgot password clicked")}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+
           {!isLogin && (
             <AuthInput
               label="Confirm password"
@@ -101,13 +113,21 @@ export default function Login() {
 
           <View style={styles.separatorContainer}>
             <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>Or login with</Text>
+            <Text style={styles.separatorText}>or</Text>
             <View style={styles.separatorLine} />
           </View>
 
           <View style={styles.socialContainer}>
-            <SocialButton title="Google" iconName="logo-google" onPress={() => console.log('Google login')} />
-            <SocialButton title="Apple" iconName="logo-apple" onPress={() => console.log('Apple login')} />
+            <SocialButton
+              title="Google"
+              iconName="logo-google"
+              onPress={() => console.log("Google login")}
+            />
+            <SocialButton
+              title="Apple"
+              iconName="logo-apple"
+              onPress={() => console.log("Apple login")}
+            />
           </View>
         </View>
       </ScrollView>
@@ -140,6 +160,17 @@ const styles = StyleSheet.create({
   formContainer: {
     paddingHorizontal: 24,
     paddingBottom: 40,
+  },
+  forgotPasswordContainer: {
+    alignSelf: "center",
+    marginBottom: 6,
+    marginTop: 6,
+  },
+  forgotPasswordText: {
+    color: "#aaa",
+    fontSize: 14,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   separatorContainer: {
     flexDirection: "row",
