@@ -35,6 +35,10 @@ export default function Login() {
         password,
         confirmPassword,
       });
+      router.push({
+        pathname: "/(auth)/verify-email",
+        params: { email: email || "user9527@gmail.com" },
+      });
     }
   };
 
