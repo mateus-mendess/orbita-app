@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 interface AuthInputProps extends TextInputProps {
   label: string;
   iconName: keyof typeof Ionicons.glyphMap;
+  error?: boolean;
+  errorMessage?: string;
 }
 
-export const AuthInput: React.FC<AuthInputProps> = ({ label, iconName, multiline, ...props }) => {
+export const AuthInput: React.FC<AuthInputProps> = ({ label, iconName, error, errorMessage, multiline, ...props }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -23,6 +25,9 @@ export const AuthInput: React.FC<AuthInputProps> = ({ label, iconName, multiline
           {...props} 
         />
       </View>
+      {error && errorMessage ? (
+        <Text style={styles.errorText}>{errorMessage}</Text>
+      ) : null}
     </View>
   );
 };
@@ -69,5 +74,11 @@ const styles = StyleSheet.create({
   inputMultiline: {
     height: '100%',
     textAlignVertical: 'top',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 16,
   }
 });

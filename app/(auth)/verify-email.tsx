@@ -4,13 +4,18 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { NumericKeypad } from '../../components/(auth)/NumericKeypad';
 import { PinIndicator } from '../../components/(auth)/PinIndicator';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function VerifyEmail() {
   const params = useLocalSearchParams();
   const rawEmail = params.email as string;
+  const userId = params.id as string;
   
   const [pin, setPin] = useState('');
   const [timeLeft, setTimeLeft] = useState(59);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const { verifyEmail, isLoading } = useAuth();
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -20,9 +25,30 @@ export default function VerifyEmail() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  const handleKeyPress = (key: string) => {
-    if (pin.length < 6) {
-      setPin(prev => prev + key);
+  const handleKeyPress = async (key: string) => {
+    if (pin.length < 6 && !isLoading) {
+      const newPin = pin + key;
+      setPin(newPin);
+      setErrorMsg('');
+      
+      if (newPin.length === 6) {
+        const res = await verifyEmail(userId, newPin);
+        if (res.success) {
+          router.replace('/(tabs)');
+        } else {
+          if (res.status === 400) {
+            setErrorMsg('Código inválido, tente novamente');
+            setPin('');
+          } else if (res.status === 404) {
+            setErrorMsg('Usuário não encontrado');
+          } else if (res.status === 410) {
+            setErrorMsg('Código expirado');
+            setTimeLeft(0);
+          } else {
+            setErrorMsg('Erro ao verificar código');
+          }
+        }
+      }
     }
   };
 
@@ -70,6 +96,7 @@ export default function VerifyEmail() {
         </Text>
 
         <PinIndicator pin={pin} length={6} />
+        {errorMsg ? <Text style={styles.errorMessage}>{errorMsg}</Text> : null}
 
         <View style={styles.resendContainer}>
           <Text style={styles.resendText}>Não recebeu o e-mail?</Text>
@@ -138,6 +165,12 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 14,
     lineHeight: 22,
+  },
+  errorMessage: {
+    color: '#ff4444',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 16,
   },
   resendContainer: {
     alignItems: 'center',

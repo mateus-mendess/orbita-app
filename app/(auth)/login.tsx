@@ -14,7 +14,7 @@ import { AuthInput } from "../../components/(auth)/AuthInput";
 import { AuthToggle } from "../../components/(auth)/AuthToggle";
 import { PrimaryButton } from "../../components/shared/PrimaryButton";
 import { SocialButton } from "../../components/shared/SocialButton";
-// import { useAuth } from '../../hooks/useAuth'; // Placeholder, not used yet
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,21 +24,49 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSubmit = () => {
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+
+  const { register, isLoading } = useAuth();
+
+  const validatePassword = (pass: string) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(pass);
+  };
+
+  const handleSubmit = async () => {
+    setEmailError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
+
     if (isLogin) {
       console.log("Login attempt", { email, password });
       router.replace("/(tabs)");
     } else {
-      console.log("Signup attempt", {
-        username,
-        email,
-        password,
-        confirmPassword,
-      });
-      router.push({
-        pathname: "/(auth)/verify-email",
-        params: { email: email || "user9527@gmail.com" },
-      });
+      let hasError = false;
+      if (!validatePassword(password)) {
+        setPasswordError("Mínimo 8 caracteres, maiúscula, minúscula, número e especial.");
+        hasError = true;
+      }
+      if (password !== confirmPassword) {
+        setConfirmPasswordError("As senhas não coincidem.");
+        hasError = true;
+      }
+      if (hasError) return;
+
+      const res = await register({ name: username, email, password, confirmPassword });
+      
+      if (res.success) {
+        router.push({
+          pathname: "/(auth)/verify-email",
+          params: { email, id: res.id },
+        });
+      } else if (res.status === 409) {
+        setEmailError("Este e-mail já está cadastrado");
+      } else {
+        // generic error could be shown in an alert or general error state
+      }
     }
   };
 
@@ -79,6 +107,8 @@ export default function Login() {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
+            error={!!emailError}
+            errorMessage={emailError}
           />
 
           <AuthInput
@@ -88,6 +118,8 @@ export default function Login() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            error={!!passwordError}
+            errorMessage={passwordError}
           />
 
           {isLogin && (
@@ -107,11 +139,13 @@ export default function Login() {
               secureTextEntry
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              error={!!confirmPasswordError}
+              errorMessage={confirmPasswordError}
             />
           )}
 
           <PrimaryButton
-            title={isLogin ? "Login" : "Sign up"}
+            title={isLoading ? "Carregando..." : (isLogin ? "Login" : "Sign up")}
             onPress={handleSubmit}
           />
 
