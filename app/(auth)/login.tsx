@@ -145,7 +145,8 @@ export default function Login() {
           )}
 
           <PrimaryButton
-            title={isLoading ? "Carregando..." : (isLogin ? "Login" : "Sign up")}
+            title={isLogin ? "Login" : "Sign up"}
+            isLoading={isLoading}
             onPress={handleSubmit}
           />
 

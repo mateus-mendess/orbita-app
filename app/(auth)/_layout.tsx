@@ -9,7 +9,7 @@ export default function AuthLayout() {
         name="verify-email" 
         options={{ 
           headerShown: false,
-          presentation: 'modal',
+          presentation: 'transparentModal',
         }} 
       />
     </Stack>
