@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Animated, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NumericKeypad } from '../../components/(auth)/NumericKeypad';
-import { PinIndicator } from '../../components/(auth)/PinIndicator';
+import { OTPInput } from '../../components/(auth)/OTPInput';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function VerifyEmail() {
@@ -14,6 +13,8 @@ export default function VerifyEmail() {
   const [pin, setPin] = useState('');
   const [timeLeft, setTimeLeft] = useState(59);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(0)).current;
 
   const { verifyEmail, isLoading } = useAuth();
 
@@ -25,36 +26,35 @@ export default function VerifyEmail() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  const handleKeyPress = async (key: string) => {
-    if (pin.length < 6 && !isLoading) {
-      const newPin = pin + key;
-      setPin(newPin);
-      setErrorMsg('');
-      
-      if (newPin.length === 6) {
-        const res = await verifyEmail(userId, newPin);
-        if (res.success) {
+  const handleOTPComplete = async (code: string) => {
+    if (isLoading) return;
+    setErrorMsg('');
+    
+    const res = await verifyEmail(userId, code);
+    if (res.success) {
+      setIsSuccess(true);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 12,
+        bounciness: 10,
+      }).start(() => {
+        setTimeout(() => {
           router.replace('/(tabs)');
-        } else {
-          if (res.status === 400) {
-            setErrorMsg('Código inválido, tente novamente');
-            setPin('');
-          } else if (res.status === 404) {
-            setErrorMsg('Usuário não encontrado');
-          } else if (res.status === 410) {
-            setErrorMsg('Código expirado');
-            setTimeLeft(0);
-          } else {
-            setErrorMsg('Erro ao verificar código');
-          }
-        }
+        }, 600);
+      });
+    } else {
+      if (res.status === 400) {
+        setErrorMsg('Código inválido, tente novamente');
+        setPin(''); // clear pins on invalid code
+      } else if (res.status === 404) {
+        setErrorMsg('Usuário não encontrado');
+      } else if (res.status === 410) {
+        setErrorMsg('Código expirado');
+        setTimeLeft(0);
+      } else {
+        setErrorMsg('Erro ao verificar código');
       }
-    }
-  };
-
-  const handleBackspace = () => {
-    if (pin.length > 0) {
-      setPin(prev => prev.slice(0, -1));
     }
   };
 
@@ -76,56 +76,86 @@ export default function VerifyEmail() {
   const displayedEmail = maskEmail(rawEmail);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+    <KeyboardAvoidingView 
+      style={styles.overlay}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <Pressable style={styles.backdrop} onPress={() => router.back()} />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Verifique seu e-mail</Text>
-        
-        <Text style={styles.subtitle}>
-          Enviamos um e-mail para:{'\n'}
-          <Text style={styles.emailText}>{displayedEmail}</Text>
-        </Text>
-
-        <Text style={styles.instructions}>
-          Digite o código de verificação enviado para seu e-mail. Se não encontrar, confira também a caixa de spam.
-        </Text>
-
-        <PinIndicator pin={pin} length={6} />
-        {errorMsg ? <Text style={styles.errorMessage}>{errorMsg}</Text> : null}
-
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Não recebeu o e-mail?</Text>
-          <TouchableOpacity 
-            style={[styles.resendButton, timeLeft > 0 && styles.resendButtonDisabled]} 
-            onPress={handleResend}
-            disabled={timeLeft > 0}
-          >
-            <Text style={[styles.resendButtonText, timeLeft > 0 && styles.resendButtonTextDisabled]}>
-              Reenviar e-mail {timeLeft > 0 ? `(${timeLeft}s)` : ''}
-            </Text>
+      <SafeAreaView style={styles.sheet}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.spacer} />
+        <View style={styles.content}>
+          <Text style={styles.title}>Verifique seu e-mail</Text>
+          
+          <Text style={styles.subtitle}>
+            Enviamos um e-mail para:{'\n'}
+            <Text style={styles.emailText}>{displayedEmail}</Text>
+          </Text>
 
-        <NumericKeypad onKeyPress={handleKeyPress} onBackspace={handleBackspace} />
-      </View>
-    </SafeAreaView>
+          <Text style={styles.instructions}>
+            Digite o código de verificação enviado para seu e-mail. Se não encontrar, confira também a caixa de spam.
+          </Text>
+
+          {isSuccess ? (
+            <View style={styles.successContainer}>
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <View style={styles.checkCircle}>
+                  <Ionicons name="checkmark" size={32} color="#000" />
+                </View>
+              </Animated.View>
+              <Text style={styles.successText}>Código validado!</Text>
+            </View>
+          ) : (
+            <OTPInput 
+              code={pin}
+              setCode={setPin}
+              onComplete={handleOTPComplete}
+              isLoading={isLoading}
+            />
+          )}
+          
+          {!isSuccess && errorMsg ? <Text style={styles.errorMessage}>{errorMsg}</Text> : null}
+
+          {!isSuccess && (
+            <View style={styles.resendContainer}>
+              <Text style={styles.resendText}>Não recebeu o e-mail?</Text>
+              <TouchableOpacity 
+                style={[styles.resendButton, timeLeft > 0 && styles.resendButtonDisabled]} 
+                onPress={handleResend}
+                disabled={timeLeft > 0}
+              >
+                <Text style={[styles.resendButtonText, timeLeft > 0 && styles.resendButtonTextDisabled]}>
+                  Reenviar e-mail {timeLeft > 0 ? `(${timeLeft}s)` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
+    justifyContent: "flex-end",
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  sheet: {
     backgroundColor: '#000000',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     overflow: 'hidden',
+    paddingBottom: 24,
   },
   header: {
     paddingHorizontal: 24,
@@ -141,9 +171,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingTop: 16,
   },
   title: {
     color: '#fff',
@@ -175,6 +204,7 @@ const styles = StyleSheet.create({
   resendContainer: {
     alignItems: 'center',
     marginTop: 10,
+    marginBottom: 20,
   },
   resendText: {
     color: '#aaa',
@@ -198,7 +228,23 @@ const styles = StyleSheet.create({
   resendButtonTextDisabled: {
     color: '#666',
   },
-  spacer: {
-    flex: 1,
+  successContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 40,
+  },
+  checkCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  successText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   }
 });
