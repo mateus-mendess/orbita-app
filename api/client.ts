@@ -1,4 +1,4 @@
-export const API_BASE_URL = "http://192.168.0.102:8080";
+export const API_BASE_URL = "http://192.168.3.159:8080";
 
 export const client = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;

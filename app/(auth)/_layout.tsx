@@ -12,6 +12,13 @@ export default function AuthLayout() {
           presentation: 'transparentModal',
         }} 
       />
+      <Stack.Screen 
+        name="forgot-password" 
+        options={{ 
+          headerShown: false,
+          presentation: 'transparentModal',
+        }} 
+      />
     </Stack>
   );
 }
