@@ -1,13 +1,22 @@
+import {
+  CoreBridge,
+  editorHtml,
+  RichText,
+  TenTapStartKit,
+  useBridgeState,
+  useEditorBridge,
+  useEditorContent,
+} from "@10play/tentap-editor";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   AppState,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -18,11 +27,98 @@ import { THEME_COLORS } from "../../constants/theme";
 import { useNotes } from "../../hooks/useNotes";
 import { CATEGORY_CONFIG } from "../../types/categories";
 import {
-  applyMarkdownAction,
+  convertMarkdownToHtml,
   formatNoteDate,
-  handleChecklistEnter,
-  toggleChecklistAtLine,
+  htmlToPlainText,
 } from "../../utils/markdown";
+
+const INJECTED_CSS = `
+  html, body {
+    background-color: #000000 !important;
+    color: #DDDDDD !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 100% !important;
+    height: 100% !important;
+    caret-color: #FFFFFF !important;
+  }
+  .tiptap, .ProseMirror {
+    min-height: 100% !important;
+    padding: 12px 20px 100px 20px !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+  }
+  ::selection {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+  p {
+    margin: 4px 0 !important;
+  }
+  ul[data-type="taskList"] {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 6px 0 !important;
+  }
+  li[data-type="taskItem"] {
+    display: flex !important;
+    align-items: flex-start !important;
+    margin: 8px 0 !important;
+  }
+  li[data-type="taskItem"] > label {
+    user-select: none !important;
+    margin-right: 12px !important;
+    margin-top: 2px !important;
+    cursor: pointer !important;
+  }
+  li[data-type="taskItem"] input[type="checkbox"] {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    border: 2px solid #555555 !important;
+    background-color: transparent !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    outline: none !important;
+  }
+  li[data-type="taskItem"][data-checked="true"] input[type="checkbox"],
+  li[data-type="taskItem"] input[type="checkbox"]:checked {
+    background-color: #FFFFFF !important;
+    border-color: #FFFFFF !important;
+  }
+  li[data-type="taskItem"][data-checked="true"] input[type="checkbox"]::after,
+  li[data-type="taskItem"] input[type="checkbox"]:checked::after {
+    content: "" !important;
+    width: 5px !important;
+    height: 10px !important;
+    border: solid #000000 !important;
+    border-width: 0 2px 2px 0 !important;
+    transform: rotate(45deg) translate(-1px, -1px) !important;
+    display: block !important;
+  }
+  li[data-type="taskItem"][data-checked="true"] > div,
+  li[data-type="taskItem"] input[type="checkbox"]:checked ~ div {
+    text-decoration: line-through !important;
+    opacity: 0.5 !important;
+  }
+`;
+
+const CUSTOM_EDITOR_SOURCE = editorHtml.replace(
+  "</head>",
+  `<style id="orbita-theme">${INJECTED_CSS}</style></head>`
+);
+
+const BRIDGE_EXTENSIONS = [
+  ...TenTapStartKit.filter((b) => b.name !== "coreBridge"),
+  CoreBridge.configureCSS(INJECTED_CSS),
+];
 
 export default function NoteEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,53 +127,80 @@ export default function NoteEditorScreen() {
   const note = getNoteById(id || "");
 
   const [title, setTitle] = useState(note?.title || "");
-  const [content, setContent] = useState(note?.content || "");
-  const [isEditing, setIsEditing] = useState(() => !note?.content);
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  const inputRef = useRef<TextInput>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Sincroniza se a nota mudar externamente
+  // Monitora abertura/fechamento do teclado
   useEffect(() => {
-    if (note) {
-      setTitle(note.title);
-      setContent(note.content);
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Migra notas legadas salvas em markdown para HTML na primeira abertura
+  const initialHtml = useMemo(() => {
+    const raw = note?.content || "";
+    if (!raw.trim()) return "<p></p>";
+    if (!raw.trim().startsWith("<")) {
+      return convertMarkdownToHtml(raw);
     }
+    return raw;
   }, [note?.id]);
 
-  const saveToGlobal = useCallback(
-    (newTitle: string, newContent: string) => {
-      if (!id) return;
-      updateNote(id, { title: newTitle, content: newContent });
+  // Persiste a migração de notas legadas de markdown para HTML após renderização
+  useEffect(() => {
+    const raw = note?.content || "";
+    if (raw && !raw.trim().startsWith("<") && id) {
+      updateNote(id, { content: convertMarkdownToHtml(raw) });
+    }
+  }, [id, note?.content, updateNote]);
+
+  const editor = useEditorBridge({
+    bridgeExtensions: BRIDGE_EXTENSIONS,
+    initialContent: initialHtml,
+    customSource: CUSTOM_EDITOR_SOURCE,
+    autofocus: !note?.content,
+    avoidIosKeyboard: true,
+    theme: {
+      webview: { backgroundColor: "#000000" },
+      webviewContainer: { backgroundColor: "#000000" },
     },
-    [id, updateNote]
-  );
+  });
 
-  const scheduleSave = (newTitle: string, newContent: string) => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToGlobal(newTitle, newContent);
-    }, 400);
-  };
+  const editorState = useBridgeState(editor);
 
-  // Salva ao desmontar da tela
+  // Sincroniza conteúdo com debounce de 400ms nativo do TenTap
+  const editorHtml = useEditorContent(editor, {
+    type: "html",
+    debounceInterval: 400,
+  });
+
   useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveToGlobal(title, content);
-    };
-  }, [title, content, saveToGlobal]);
+    if (editorHtml !== undefined && id) {
+      updateNote(id, { content: editorHtml });
+    }
+  }, [editorHtml, id, updateNote]);
 
-  // Salva se o app for para segundo plano
+  // Salva no ciclo de vida ao ir para segundo plano
   useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state !== "active") {
-        saveToGlobal(title, content);
+    const sub = AppState.addEventListener("change", async (state) => {
+      if (state !== "active" && id) {
+        try {
+          const current = await editor.getHTML();
+          if (current) updateNote(id, { title, content: current });
+        } catch {}
       }
     });
     return () => sub.remove();
-  }, [title, content, saveToGlobal]);
+  }, [id, title, editor, updateNote]);
 
   if (!note) {
     return (
@@ -89,6 +212,19 @@ export default function NoteEditorScreen() {
       </View>
     );
   }
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (id) updateNote(id, { title: newTitle });
+  };
+
+  const handleBack = async () => {
+    try {
+      const current = await editor.getHTML();
+      if (id && current) updateNote(id, { title, content: current });
+    } catch {}
+    router.back();
+  };
 
   const handleDelete = () => {
     Alert.alert("Excluir nota", "Tem certeza que deseja excluir esta nota?", [
@@ -104,83 +240,29 @@ export default function NoteEditorScreen() {
     ]);
   };
 
-  const handleBack = () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveToGlobal(title, content);
-    router.back();
-  };
-
-  const handleDone = () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveToGlobal(title, content);
-    setIsEditing(false);
-  };
-
-  const handleContentChange = (text: string) => {
-    // Detecta se acabou de pressionar Enter numa linha de checklist
-    if (
-      text.length === content.length + 1 &&
-      text[selection.start] === "\n"
-    ) {
-      const enterResult = handleChecklistEnter(content, selection.start);
-      if (enterResult) {
-        setContent(enterResult.newContent);
-        scheduleSave(title, enterResult.newContent);
-        return;
-      }
+  const handleShare = async () => {
+    let htmlContent = "";
+    try {
+      htmlContent = (await editor.getHTML()) || note.content;
+    } catch {
+      htmlContent = note.content;
     }
 
-    setContent(text);
-    scheduleSave(title, text);
-  };
+    const plainBody = htmlToPlainText(htmlContent, true);
+    if (!title.trim() && !plainBody.trim()) return;
 
-  const handleTitleChange = (newTitle: string) => {
-    setTitle(newTitle);
-    scheduleSave(newTitle, content);
-  };
+    const message = title.trim()
+      ? `${title.trim()}\n\n${plainBody}`
+      : plainBody;
 
-  const handleBold = () => {
-    const result = applyMarkdownAction(content, selection, "bold");
-    setContent(result.newContent);
-    scheduleSave(title, result.newContent);
-  };
-
-  const handleChecklist = () => {
-    const result = applyMarkdownAction(content, selection, "checklist");
-    setContent(result.newContent);
-    scheduleSave(title, result.newContent);
-  };
-
-  // Alterna checkbox no modo leitura sem entrar em edição
-  const handleToggleChecklist = (lineIndex: number) => {
-    const updated = toggleChecklistAtLine(content, lineIndex);
-    setContent(updated);
-    saveToGlobal(title, updated);
+    try {
+      await Share.share({ message });
+    } catch {}
   };
 
   const categoryLabel = CATEGORY_CONFIG[note.category]?.label || "Geral";
   const dateLabel = formatNoteDate(note.createdAt);
-
-  // Renderiza negrito com split por regex
-  const renderBoldSegments = (text: string, isChecked: boolean) => {
-    const segments = text.split(/(\*\*[^*]+\*\*)/g);
-    return segments.map((seg, idx) => {
-      if (seg.startsWith("**") && seg.endsWith("**") && seg.length >= 4) {
-        return (
-          <Text
-            key={idx}
-            style={[
-              styles.boldText,
-              isChecked && styles.itemTextChecked,
-            ]}
-          >
-            {seg.slice(2, -2)}
-          </Text>
-        );
-      }
-      return <Text key={idx}>{seg}</Text>;
-    });
-  };
+  const hasContent = Boolean(title.trim() || note.content.trim());
 
   return (
     <KeyboardAvoidingView
@@ -191,43 +273,60 @@ export default function NoteEditorScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={handleBack}
-          hitSlop={10}
-          style={styles.headerAction}
+          hitSlop={12}
+          style={styles.headerBackBtn}
         >
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
 
-        <View style={styles.headerRight}>
-          {isEditing ? (
-            <TouchableOpacity onPress={handleDone} style={styles.doneBtn}>
-              <Text style={styles.doneBtnText}>Concluir</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setIsEditing(true)}
-              style={styles.editBtn}
-            >
-              <Text style={styles.editBtnText}>Editar</Text>
-            </TouchableOpacity>
-          )}
+        <View style={styles.headerActionsRight}>
+          {/* Desfazer: 48pt, ícone minimalista 24pt */}
+          <TouchableOpacity
+            onPress={() => editor.undo()}
+            disabled={!editorState.canUndo}
+            hitSlop={8}
+            style={[
+              styles.headerCircleBtn,
+              !editorState.canUndo && styles.headerBtnDisabled,
+            ]}
+          >
+            <Ionicons
+              name="arrow-undo-outline"
+              size={24}
+              color={editorState.canUndo ? "#FFF" : "#666"}
+            />
+          </TouchableOpacity>
 
+          {/* Compartilhar: 48pt, ícone 24pt */}
+          <TouchableOpacity
+            onPress={handleShare}
+            disabled={!hasContent}
+            hitSlop={8}
+            style={[
+              styles.headerCircleBtn,
+              !hasContent && styles.headerBtnDisabled,
+            ]}
+          >
+            <Ionicons
+              name="share-outline"
+              size={24}
+              color={hasContent ? "#FFF" : "#666"}
+            />
+          </TouchableOpacity>
+
+          {/* Excluir: 48pt, ícone 24pt */}
           <TouchableOpacity
             onPress={handleDelete}
-            hitSlop={10}
-            style={[styles.headerAction, { marginLeft: 12 }]}
+            hitSlop={8}
+            style={styles.headerCircleBtn}
           >
-            <Ionicons name="trash-outline" size={22} color="#EF4444" />
+            <Ionicons name="trash-outline" size={24} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Corpo da Nota */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Título */}
+      {/* Título e Metadados Nativos */}
+      <View style={styles.metaContainer}>
         <TextInput
           style={styles.titleInput}
           value={title}
@@ -236,104 +335,86 @@ export default function NoteEditorScreen() {
           placeholderTextColor="#555"
           multiline
         />
-
-        {/* Metadados: Categoria e Data */}
         <Text style={styles.subtitle}>
           {categoryLabel} · Criada em {dateLabel}
         </Text>
-
         <View style={styles.divider} />
+      </View>
 
-        {/* Conteúdo: Modo Edição ou Leitura */}
-        {isEditing ? (
-          <TextInput
-            ref={inputRef}
-            style={styles.contentInput}
-            value={content}
-            onChangeText={handleContentChange}
-            onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
-            placeholder="Comece a escrever..."
-            placeholderTextColor="#555"
-            multiline
-            autoFocus={!content}
-          />
-        ) : (
-          <View style={styles.readContainer}>
-            {content.split("\n").map((line, lineIdx) => {
-              if (!line.trim()) {
-                return <View key={lineIdx} style={{ height: 12 }} />;
-              }
+      {/* Editor Sempre Editável (TenTap RichText) */}
+      <View style={styles.editorWrapper}>
+        <RichText
+          editor={editor}
+          style={styles.richText}
+          containerStyle={styles.richTextContainer}
+        />
+      </View>
 
-              const isChecklist =
-                line.startsWith("- [ ] ") || line.startsWith("- [x] ");
-              const isChecked = line.startsWith("- [x] ");
+      {/* Barra de Ferramentas Compacta (Visível apenas com Teclado Aberto) */}
+      {keyboardVisible ? (
+        <View style={styles.toolbarContainer}>
+          <View style={styles.mainToolbar}>
+            <TouchableOpacity
+              style={[
+                styles.toolBtn,
+                editorState.isBoldActive && styles.toolBtnActive,
+              ]}
+              onPress={() => editor.toggleBold()}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.boldBtnText,
+                  editorState.isBoldActive && styles.toolTextActive,
+                ]}
+              >
+                B
+              </Text>
+            </TouchableOpacity>
 
-              if (isChecklist) {
-                const itemText = line.slice(6);
-                return (
-                  <View key={lineIdx} style={styles.checklistRow}>
-                    <Pressable
-                      hitSlop={8}
-                      style={styles.checkboxTouch}
-                      onPress={() => handleToggleChecklist(lineIdx)}
-                    >
-                      <Ionicons
-                        name={isChecked ? "checkmark-circle" : "ellipse-outline"}
-                        size={22}
-                        color={isChecked ? "#FFFFFF" : "#555"}
-                      />
-                    </Pressable>
-                    <Pressable
-                      style={styles.checklistTextWrapper}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <Text
-                        style={[
-                          styles.checklistText,
-                          isChecked && styles.itemTextChecked,
-                        ]}
-                      >
-                        {renderBoldSegments(itemText, isChecked)}
-                      </Text>
-                    </Pressable>
-                  </View>
-                );
-              }
+            <TouchableOpacity
+              style={[
+                styles.toolBtn,
+                editorState.isUnderlineActive && styles.toolBtnActive,
+              ]}
+              onPress={() => editor.toggleUnderline()}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.underlineBtnText,
+                  editorState.isUnderlineActive && styles.toolTextActive,
+                ]}
+              >
+                U
+              </Text>
+            </TouchableOpacity>
 
-              return (
-                <Pressable
-                  key={lineIdx}
-                  onPress={() => setIsEditing(true)}
-                  style={styles.paragraphPressable}
-                >
-                  <Text style={styles.paragraphText}>
-                    {renderBoldSegments(line, false)}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            <TouchableOpacity
+              style={[
+                styles.toolBtn,
+                editorState.isTaskListActive && styles.toolBtnActive,
+              ]}
+              onPress={() => editor.toggleTaskList()}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="checkbox-outline"
+                size={22}
+                color={editorState.isTaskListActive ? "#FFF" : "#BBB"}
+              />
+            </TouchableOpacity>
+
+            <View style={styles.toolDivider} />
+
+            <TouchableOpacity
+              style={styles.toolBtn}
+              onPress={() => Keyboard.dismiss()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chevron-down" size={20} color="#AAA" />
+            </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
-
-      {/* Barra de Ferramentas (Modo Edição) */}
-      {isEditing ? (
-        <View style={styles.toolbar}>
-          <TouchableOpacity
-            style={styles.toolbarBtn}
-            onPress={handleBold}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.boldIconText}>B</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolbarBtn}
-            onPress={handleChecklist}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="checkbox-outline" size={22} color="#FFF" />
-          </TouchableOpacity>
         </View>
       ) : null}
     </KeyboardAvoidingView>
@@ -354,128 +435,107 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: 54,
-    paddingBottom: 12,
+    paddingBottom: 14,
     paddingHorizontal: 20,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#1E1E1E",
   },
-  headerAction: {
-    padding: 4,
+  headerBackBtn: {
+    padding: 6,
   },
-  headerRight: {
+  headerActionsRight: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
   },
-  doneBtn: {
-    backgroundColor: "#FFF",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-  },
-  doneBtnText: {
-    color: "#000",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  editBtn: {
+  headerCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#1E1E1E",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2E2E2E",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  editBtnText: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 13,
+  headerBtnDisabled: {
+    opacity: 0.35,
   },
-  scrollContent: {
-    paddingTop: 20,
+  metaContainer: {
+    paddingTop: 16,
     paddingHorizontal: 20,
-    paddingBottom: 60,
   },
   titleInput: {
     color: "#FFF",
     fontSize: 26,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 6,
     padding: 0,
   },
   subtitle: {
     color: "#888",
     fontSize: 13,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#222",
-    marginBottom: 20,
   },
-  contentInput: {
-    color: "#DDD",
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 250,
-    padding: 0,
-    textAlignVertical: "top",
-  },
-  readContainer: {
-    minHeight: 250,
-  },
-  checklistRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-  checkboxTouch: {
-    marginRight: 10,
-    marginTop: 1,
-  },
-  checklistTextWrapper: {
+  editorWrapper: {
     flex: 1,
+    backgroundColor: "#000",
   },
-  checklistText: {
-    color: "#DDD",
-    fontSize: 16,
-    lineHeight: 24,
+  richText: {
+    backgroundColor: "#000",
   },
-  itemTextChecked: {
-    textDecorationLine: "line-through",
-    color: "#666",
-    opacity: 0.6,
+  richTextContainer: {
+    backgroundColor: "#000",
   },
-  paragraphPressable: {
-    marginBottom: 10,
+  toolbarContainer: {
+    alignItems: "center",
+    paddingBottom: 12,
+    paddingHorizontal: 16,
   },
-  paragraphText: {
-    color: "#DDD",
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  boldText: {
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  toolbar: {
+  mainToolbar: {
     flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#161616",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#262626",
-    gap: 16,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#262626",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 8,
   },
-  toolbarBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#262626",
+  toolBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  boldIconText: {
-    color: "#FFF",
-    fontWeight: "900",
+  toolBtnActive: {
+    backgroundColor: "#2E2E2E",
+  },
+  toolDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: "#2E2E2E",
+    marginHorizontal: 2,
+  },
+  boldBtnText: {
+    color: "#BBB",
     fontSize: 16,
+    fontWeight: "800",
+  },
+  underlineBtnText: {
+    color: "#BBB",
+    fontSize: 16,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  toolTextActive: {
+    color: "#FFF",
   },
   errorText: {
     color: "#888",
@@ -483,13 +543,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backBtn: {
-    backgroundColor: "#FFF",
-    paddingHorizontal: 20,
+    backgroundColor: "#1E1E1E",
     paddingVertical: 10,
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    borderRadius: 12,
   },
   backBtnText: {
-    color: "#000",
-    fontWeight: "700",
+    color: "#FFF",
+    fontWeight: "600",
   },
 });

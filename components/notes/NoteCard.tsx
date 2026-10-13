@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Note } from "../../types/notes";
-import { formatNoteDate, stripMarkdown } from "../../utils/markdown";
+import { formatNoteDate, htmlToPlainText } from "../../utils/markdown";
 
 interface NoteCardProps {
   note: Note;
@@ -9,7 +9,7 @@ interface NoteCardProps {
 }
 
 export const NoteCard = React.memo<NoteCardProps>(({ note, onPress }) => {
-  const preview = stripMarkdown(note.content);
+  const preview = htmlToPlainText(note.content, false);
   const formattedDate = formatNoteDate(note.createdAt);
 
   return (

@@ -25,118 +25,104 @@ export function formatNoteDate(isoString: string): string {
   return `${day} de ${month} de ${d.getFullYear()}`;
 }
 
-export function stripMarkdown(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/\*\*/g, "")
-    .replace(/- \[[ x]\] /g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
 }
 
-export function toggleChecklistAtLine(content: string, targetLineIndex: number): string {
-  const lines = content.split("\n");
-  if (targetLineIndex < 0 || targetLineIndex >= lines.length) return content;
+/**
+ * Converte HTML para texto simples:
+ * - Para prévia (includeCheckboxes = false): texto corrido limpo sem tags, até 2 linhas.
+ * - Para compartilhar (includeCheckboxes = true): parágrafos separados por linha, itens de checklist como ☐ e ☑.
+ */
+export function htmlToPlainText(
+  html: string,
+  includeCheckboxes: boolean = false
+): string {
+  if (!html) return "";
 
-  const line = lines[targetLineIndex];
-  if (line.startsWith("- [ ] ")) {
-    lines[targetLineIndex] = "- [x] " + line.slice(6);
-  } else if (line.startsWith("- [x] ")) {
-    lines[targetLineIndex] = "- [ ] " + line.slice(6);
+  if (!includeCheckboxes) {
+    const clean = html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return decodeHtmlEntities(clean);
   }
+
+  const text = html
+    .replace(/<li[^>]*data-checked="true"[^>]*>[\s\S]*?<p>(.*?)<\/p>[\s\S]*?<\/li>/gi, "☑ $1\n")
+    .replace(/<li[^>]*data-checked="false"[^>]*>[\s\S]*?<p>(.*?)<\/p>[\s\S]*?<\/li>/gi, "☐ $1\n")
+    .replace(/<li[^>]*>[\s\S]*?<input[^>]*checked[^>]*>[\s\S]*?<p>(.*?)<\/p>[\s\S]*?<\/li>/gi, "☑ $1\n")
+    .replace(/<li[^>]*>[\s\S]*?<input[^>]*>[\s\S]*?<p>(.*?)<\/p>[\s\S]*?<\/li>/gi, "☐ $1\n")
+    .replace(/<p>(.*?)<\/p>/gi, "$1\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+
+  const lines = text
+    .split("\n")
+    .map((l) => decodeHtmlEntities(l.trim()))
+    .filter(Boolean);
 
   return lines.join("\n");
 }
 
-export function applyMarkdownAction(
-  content: string,
-  selection: { start: number; end: number },
-  action: "bold" | "checklist"
-): { newContent: string; newSelection?: { start: number; end: number } } {
-  const { start, end } = selection;
+/**
+ * Converte notas antigas salvas em markdown para HTML na primeira abertura.
+ */
+export function convertMarkdownToHtml(markdown: string): string {
+  if (!markdown || !markdown.trim()) return "<p></p>";
+  if (markdown.trim().startsWith("<")) return markdown;
 
-  if (action === "bold") {
-    if (start === end) {
-      const before = content.slice(0, start);
-      const after = content.slice(end);
-      return {
-        newContent: before + "****" + after,
-        newSelection: { start: start + 2, end: start + 2 },
-      };
+  const lines = markdown.split("\n");
+  const htmlParts: string[] = [];
+  let inTaskList = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      if (inTaskList) {
+        htmlParts.push("</ul>");
+        inTaskList = false;
+      }
+      continue;
     }
 
-    const selectedText = content.slice(start, end);
-    if (selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4) {
-      // Remove bold
-      const unwrapped = selectedText.slice(2, -2);
-      return {
-        newContent: content.slice(0, start) + unwrapped + content.slice(end),
-        newSelection: { start, end: start + unwrapped.length },
-      };
+    const isChecklistOpen = line.startsWith("- [ ] ");
+    const isChecklistDone = line.startsWith("- [x] ");
+
+    if (isChecklistOpen || isChecklistDone) {
+      if (!inTaskList) {
+        htmlParts.push('<ul data-type="taskList">');
+        inTaskList = true;
+      }
+      const rawText = line.slice(6);
+      const textWithBold = rawText.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      const checkedAttr = isChecklistDone ? ' data-checked="true"' : ' data-checked="false"';
+      htmlParts.push(
+        `<li data-type="taskItem"${checkedAttr}><label><input type="checkbox"${isChecklistDone ? ' checked="checked"' : ""}></label><div><p>${textWithBold}</p></div></li>`
+      );
+    } else {
+      if (inTaskList) {
+        htmlParts.push("</ul>");
+        inTaskList = false;
+      }
+      const cleanLine = line
+        .replace(/^#{1,3}\s+/, "")
+        .replace(/^-\s+/, "")
+        .replace(/^\d+\.\s+/, "");
+      const textWithBold = cleanLine.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      htmlParts.push(`<p>${textWithBold}</p>`);
     }
-
-    const wrapped = `**${selectedText}**`;
-    return {
-      newContent: content.slice(0, start) + wrapped + content.slice(end),
-      newSelection: { start, end: start + wrapped.length },
-    };
   }
 
-  // Checklist action: opera na linha atual
-  const lineStart = content.lastIndexOf("\n", start - 1) + 1;
-  const lineEndIdx = content.indexOf("\n", start);
-  const lineEnd = lineEndIdx === -1 ? content.length : lineEndIdx;
-  const currentLine = content.slice(lineStart, lineEnd);
-
-  let updatedLine = currentLine;
-  let offsetDelta = 0;
-
-  if (currentLine.startsWith("- [ ] ")) {
-    updatedLine = currentLine.slice(6);
-    offsetDelta = -6;
-  } else if (currentLine.startsWith("- [x] ")) {
-    updatedLine = currentLine.slice(6);
-    offsetDelta = -6;
-  } else {
-    updatedLine = "- [ ] " + currentLine;
-    offsetDelta = 6;
+  if (inTaskList) {
+    htmlParts.push("</ul>");
   }
 
-  const newContent = content.slice(0, lineStart) + updatedLine + content.slice(lineEnd);
-  const newPos = Math.max(lineStart, start + offsetDelta);
-
-  return {
-    newContent,
-    newSelection: { start: newPos, end: newPos },
-  };
-}
-
-export function handleChecklistEnter(
-  content: string,
-  cursorPosition: number
-): { newContent: string; newCursor: number } | null {
-  const lineStart = content.lastIndexOf("\n", cursorPosition - 1) + 1;
-  const currentLine = content.slice(lineStart, cursorPosition);
-
-  // Se a linha de checklist estiver vazia ("- [ ] " ou "- [x] "), Enter sai da lista
-  if (currentLine === "- [ ] " || currentLine === "- [x] ") {
-    const newContent = content.slice(0, lineStart) + content.slice(cursorPosition);
-    return {
-      newContent,
-      newCursor: lineStart,
-    };
-  }
-
-  // Se a linha for uma checklist com conteúdo, continua na próxima linha
-  if (currentLine.startsWith("- [ ] ") || currentLine.startsWith("- [x] ")) {
-    const insert = "\n- [ ] ";
-    const newContent =
-      content.slice(0, cursorPosition) + insert + content.slice(cursorPosition);
-    return {
-      newContent,
-      newCursor: cursorPosition + insert.length,
-    };
-  }
-
-  return null;
+  return htmlParts.join("");
 }

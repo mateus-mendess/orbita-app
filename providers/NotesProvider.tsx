@@ -69,7 +69,7 @@ const INITIAL_NOTES: Note[] = [
     id: "note-7",
     title: "Anotações de TypeScript",
     category: "estudo",
-    content: `Resumo sobre **Generics** e **Conditional Types** em React Native.`,
+    content: `# Guia de Estudos\n\n## Tópicos Essenciais\n\n- [x] Tipagem estática em componentes\n- [ ] Utility types avançados\n\n### Formatações de Texto\n- Item com **negrito** e *itálico*\n- Item com ~~texto descontinuado~~\n\n1. Configurar tsconfig.json\n2. Executar checagem contínua\n\n| Recurso | Versão |\n| --- | --- |\n| TypeScript | 5.3 |\n| React | 19.2 |`,
     createdAt: new Date(2026, 6, 10, 8, 0).toISOString(),
     updatedAt: new Date(2026, 6, 10, 8, 0).toISOString(),
   },
