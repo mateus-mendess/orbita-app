@@ -23,6 +23,7 @@ import {
   CategoryKey,
   URGENCY_CONFIG,
   UrgencyLevel,
+  toDateKey,
 } from "../types/tasks";
 
 if (
@@ -86,7 +87,7 @@ export default function NewTask() {
     addTask({
       title: title.trim(),
       description: description.trim(),
-      date: date.toLocaleDateString("pt-BR"),
+      date: toDateKey(date),
       startTime: formatTime(startTime),
       endTime: formatTime(endTime),
       urgency,

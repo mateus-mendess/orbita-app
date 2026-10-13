@@ -58,3 +58,34 @@ export function normalizeCategory(c?: string): CategoryKey {
   if (c && c in CATEGORY_CONFIG) return c as CategoryKey;
   return "pessoal";
 }
+
+export function toDateKey(date: Date | string): string {
+  if (typeof date === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(date)) {
+      const [d, m, y] = date.split("/");
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    if (date === "Hoje") {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+    return date;
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function formatDisplayDate(dateKey: string): string {
+  if (!dateKey) return "";
+  const parts = dateKey.split("-").map(Number);
+  if (parts.length < 3 || isNaN(parts[0])) return dateKey;
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d);
+  const weekday = dt.toLocaleDateString("pt-BR", { weekday: "long" });
+  const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${capitalized}, ${d}`;
+}
+

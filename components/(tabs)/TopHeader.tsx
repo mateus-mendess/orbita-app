@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-export const TopHeader = () => {
+interface TopHeaderProps {
+  viewMode?: 'list' | 'calendar';
+  onToggleView?: () => void;
+}
+
+export const TopHeader: React.FC<TopHeaderProps> = ({
+  viewMode = 'list',
+  onToggleView,
+}) => {
   return (
     <View style={styles.container}>
       {/* Left Group */}
@@ -11,7 +19,18 @@ export const TopHeader = () => {
         <View style={styles.dateBadge}>
           <Text style={styles.dateText}>Sábado, 18</Text>
         </View>
-        <Ionicons name="calendar-clear-outline" size={24} color="#fff" style={styles.calendarIcon} />
+        <TouchableOpacity
+          style={styles.toggleButton}
+          onPress={onToggleView}
+          disabled={!onToggleView}
+          hitSlop={10}
+        >
+          <Ionicons
+            name={viewMode === 'calendar' ? 'calendar-clear-outline' : 'list-outline'}
+            size={24}
+            color="#fff"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Right Add Button */}
@@ -47,8 +66,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  calendarIcon: {
+  toggleButton: {
     marginLeft: 12,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     backgroundColor: '#1E1E1E',
