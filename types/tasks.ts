@@ -1,0 +1,60 @@
+export type UrgencyLevel =
+  | "nao_urgente"
+  | "pouco_urgente"
+  | "urgente"
+  | "muito_urgente";
+
+export const URGENCY_CONFIG = {
+  nao_urgente: { label: "Não urgente", color: "#3B82F6", icon: "flag-outline" as const },
+  pouco_urgente: { label: "Pouco urgente", color: "#10B981", icon: "flag" as const },
+  urgente: { label: "Urgente", color: "#F59E0B", icon: "flag" as const },
+  muito_urgente: { label: "Muito urgente", color: "#EF4444", icon: "flag" as const },
+};
+
+export type CategoryKey = "pessoal" | "trabalho" | "estudo";
+
+export const CATEGORY_CONFIG = {
+  pessoal: { label: "Pessoal", color: "#94A3B8", icon: "person-outline" as const },
+  trabalho: { label: "Trabalho", color: "#CBD5E1", icon: "briefcase-outline" as const },
+  estudo: { label: "Estudo", color: "#A8A29E", icon: "book-outline" as const },
+};
+
+export type PeriodId = "morning" | "afternoon" | "night";
+
+export const PERIOD_CONFIG: Record<PeriodId, { label: string }> = {
+  morning: { label: "Manhã" },
+  afternoon: { label: "Tarde" },
+  night: { label: "Noite" },
+};
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  urgency: UrgencyLevel;
+  category: CategoryKey;
+  completed: boolean;
+}
+
+export function getTaskPeriod(startTime: string): PeriodId {
+  const mins =
+    parseInt(startTime.slice(0, 2) || "0", 10) * 60 +
+    parseInt(startTime.slice(3, 5) || "0", 10);
+  if (mins >= 300 && mins < 720) return "morning";
+  if (mins >= 720 && mins < 1080) return "afternoon";
+  return "night";
+}
+
+export function normalizeUrgency(u?: string): UrgencyLevel {
+  if (u && u in URGENCY_CONFIG) return u as UrgencyLevel;
+  if (u === "Urgente e importante" || u === "Alta") return "muito_urgente";
+  return "nao_urgente";
+}
+
+export function normalizeCategory(c?: string): CategoryKey {
+  if (c && c in CATEGORY_CONFIG) return c as CategoryKey;
+  return "pessoal";
+}
