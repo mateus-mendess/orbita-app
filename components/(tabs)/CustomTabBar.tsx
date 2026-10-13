@@ -1,36 +1,72 @@
+import { Feather, Ionicons } from '@expo/vector-icons';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons, Feather } from '@expo/vector-icons';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import {
+  LayoutAnimation,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
 
-export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+interface TabConfig {
+  name: string;
+  label: string;
+  iconName: string;
+  isFeather?: boolean;
+  disabled?: boolean;
+}
+
+const TABS: TabConfig[] = [
+  { name: 'index', label: 'Dia', iconName: 'calendar-outline' },
+  { name: 'wallet', label: 'Carteira', iconName: 'wallet-outline', disabled: true },
+  { name: 'notes', label: 'Notas', iconName: 'document-text-outline' },
+  { name: 'target', label: 'Metas', iconName: 'target', isFeather: true, disabled: true },
+];
+
+export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
+  const currentRouteName = state.routes[state.index]?.name || 'index';
+
+  const handleTabPress = (tab: TabConfig) => {
+    if (tab.disabled || tab.name === currentRouteName) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    navigation.navigate(tab.name);
+  };
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
-        
-        {/* Active Tab: Dia */}
-        <TouchableOpacity style={styles.activeTab}>
-          <Ionicons name="calendar-outline" size={20} color="#000" />
-          <Text style={styles.activeText}>Dia</Text>
-        </TouchableOpacity>
+        {TABS.map((tab) => {
+          const isActive = tab.name === currentRouteName;
+          const iconColor = isActive ? '#000' : '#888';
+          const iconSize = isActive ? 20 : 24;
 
-        {/* Inactive Tabs */}
-        <TouchableOpacity style={styles.iconTab}>
-          <Ionicons name="wallet-outline" size={24} color="#888" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconTab}>
-          <Ionicons name="document-text-outline" size={24} color="#888" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.iconTab}>
-          <Feather name="target" size={24} color="#888" />
-        </TouchableOpacity>
-
+          return (
+            <TouchableOpacity
+              key={tab.name}
+              activeOpacity={tab.disabled ? 1 : 0.8}
+              onPress={() => handleTabPress(tab)}
+              style={[styles.tabItem, isActive && styles.activeTab]}
+            >
+              {tab.isFeather ? (
+                <Feather name={tab.iconName as any} size={iconSize} color={iconColor} />
+              ) : (
+                <Ionicons name={tab.iconName as any} size={iconSize} color={iconColor} />
+              )}
+              {isActive ? <Text style={styles.activeText}>{tab.label}</Text> : null}
+            </TouchableOpacity>
+          );
+        })}
       </View>
-      
-      {/* Separate More Button */}
-      <TouchableOpacity style={styles.moreButton}>
+
+      {/* Botão lateral de Mais */}
+      <TouchableOpacity style={styles.moreButton} activeOpacity={0.8}>
         <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -52,26 +88,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     borderRadius: 50,
-    padding: 8,
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'space-between',
     marginRight: 12,
   },
-  activeTab: {
+  tabItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 50,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 50,
+  },
+  activeTab: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
   },
   activeText: {
     color: '#000',
     fontWeight: '600',
     marginLeft: 6,
-  },
-  iconTab: {
-    paddingHorizontal: 12,
+    fontSize: 14,
   },
   moreButton: {
     backgroundColor: '#1E1E1E',
@@ -80,5 +118,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
 });
+

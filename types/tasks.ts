@@ -11,13 +11,8 @@ export const URGENCY_CONFIG = {
   muito_urgente: { label: "Muito urgente", color: "#EF4444", icon: "flag" as const },
 };
 
-export type CategoryKey = "pessoal" | "trabalho" | "estudo";
-
-export const CATEGORY_CONFIG = {
-  pessoal: { label: "Pessoal", color: "#94A3B8", icon: "person-outline" as const },
-  trabalho: { label: "Trabalho", color: "#CBD5E1", icon: "briefcase-outline" as const },
-  estudo: { label: "Estudo", color: "#A8A29E", icon: "book-outline" as const },
-};
+import { CategoryKey, CATEGORY_CONFIG } from "./categories";
+export * from "./categories";
 
 export type PeriodId = "morning" | "afternoon" | "night";
 

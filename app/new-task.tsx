@@ -17,6 +17,7 @@ import { AuthInput } from "../components/(auth)/AuthInput";
 import { FieldRow } from "../components/shared/FieldRow";
 import { ModalHeader } from "../components/shared/ModalHeader";
 import { PrimaryButton } from "../components/shared/PrimaryButton";
+import { THEME_COLORS } from "../constants/theme";
 import { useTasks } from "../hooks/useTasks";
 import {
   CATEGORY_CONFIG,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheet: {
-    backgroundColor: "#000",
+    backgroundColor: THEME_COLORS.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     overflow: "hidden",

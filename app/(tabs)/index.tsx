@@ -4,6 +4,7 @@ import { CalendarView } from "../../components/(tabs)/CalendarView";
 import { EmptyState } from "../../components/(tabs)/EmptyState";
 import { TaskPeriodSection } from "../../components/(tabs)/TaskPeriodSection";
 import { TopHeader } from "../../components/(tabs)/TopHeader";
+import { THEME_COLORS } from "../../constants/theme";
 import { useTasks } from "../../hooks/useTasks";
 import { PERIOD_CONFIG, PeriodId, getTaskPeriod } from "../../types/tasks";
 
@@ -53,7 +54,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: THEME_COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,

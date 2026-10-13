@@ -12,6 +12,7 @@ import {
   normalizeUrgency,
   toDateKey,
 } from "../../types/tasks";
+import { THEME_COLORS } from "../../constants/theme";
 import { DaySheet } from "./DaySheet";
 
 interface CalendarViewProps {
@@ -254,7 +255,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: THEME_COLORS.background,
   },
   weekdayHeader: {
     flexDirection: "row",
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#222",
-    backgroundColor: "#000",
+    backgroundColor: THEME_COLORS.background,
   },
   weekdayCol: {
     flex: 1,
