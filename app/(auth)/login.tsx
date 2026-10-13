@@ -79,7 +79,7 @@ export default function Login() {
         {/* Top White Curved Card */}
         <View style={styles.topCard}>
           <Image
-            source={require("../../assets/image/icon.png")}
+            source={require("../../assets/images/icon.png")}
             style={styles.logo}
             resizeMode="contain"
           />

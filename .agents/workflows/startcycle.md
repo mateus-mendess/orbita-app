@@ -7,4 +7,5 @@ Execution Sequence:
 1. Act as the Product Manager and execute the write_specs.md skill using the <idea>. (Wait for the user to explicitly approve the spec. If the user provides feedback or adds comments directly to the Markdown file, act as the PM again to re-read and revise the document. Loop this step until they type "Approved").
 2. Shift context, act as the Front-End Engineer, and execute the generate_code.md skill.
 3. Shift context, act as the QA Engineer, and execute the audit_code.md skill.
-4. Shift context, act as the DevOps Master, and execute the deploy_app.md skill.
+4. Shift context, act as the Commit Historian, and execute the write_commit.md skill.
+5. Shift context, act as the DevOps Master, and execute the deploy_app.md skill.
