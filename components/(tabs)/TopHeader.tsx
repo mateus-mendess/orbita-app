@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { formatCurrentHeaderDate } from '../../types/tasks';
 
 interface TopHeaderProps {
   viewMode?: 'list' | 'calendar';
@@ -12,12 +13,36 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   viewMode = 'list',
   onToggleView,
 }) => {
+  const [headerDate, setHeaderDate] = useState(() => formatCurrentHeaderDate());
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        setHeaderDate(formatCurrentHeaderDate());
+      }
+    });
+
+    const now = new Date();
+    const msUntilMidnight =
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1).getTime() -
+      now.getTime();
+
+    const timer = setTimeout(() => {
+      setHeaderDate(formatCurrentHeaderDate());
+    }, msUntilMidnight);
+
+    return () => {
+      subscription.remove();
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       {/* Left Group */}
       <View style={styles.leftGroup}>
         <View style={styles.dateBadge}>
-          <Text style={styles.dateText}>Sábado, 18</Text>
+          <Text style={styles.dateText}>{headerDate}</Text>
         </View>
         <TouchableOpacity
           style={styles.toggleButton}

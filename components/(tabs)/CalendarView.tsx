@@ -29,6 +29,14 @@ interface MonthItem {
 
 const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
+const MONTH_TITLE_HEIGHT = 24;
+const MONTH_TITLE_MARGIN_TOP = 16;
+const MONTH_TITLE_MARGIN_BOTTOM = 8;
+const MONTH_HEADER_HEIGHT =
+  MONTH_TITLE_MARGIN_TOP + MONTH_TITLE_HEIGHT + MONTH_TITLE_MARGIN_BOTTOM; // 48
+const WEEK_ROW_HEIGHT = 60;
+const MONTH_BOTTOM_MARGIN = 16;
+
 // Gera os 25 meses com grade de semanas pré-computada uma única vez
 const generateMonths = (): MonthItem[] => {
   const now = new Date();
@@ -75,6 +83,20 @@ const generateMonths = (): MonthItem[] => {
 };
 
 const STATIC_MONTHS = generateMonths();
+
+const getMonthHeight = (item: MonthItem) =>
+  MONTH_HEADER_HEIGHT + item.weeks.length * WEEK_ROW_HEIGHT + MONTH_BOTTOM_MARGIN;
+
+// Offsets acumulados exatos para cada um dos 25 meses: fonte única de verdade para getItemLayout
+const MONTH_OFFSETS = (() => {
+  const offsets: number[] = [];
+  let acc = 0;
+  for (const m of STATIC_MONTHS) {
+    offsets.push(acc);
+    acc += getMonthHeight(m);
+  }
+  return offsets;
+})();
 
 // Célula do dia isolada e memoizada: evita re-renderizar todo o calendário ao alterar uma tarefa
 const DayCell = React.memo<{
@@ -211,18 +233,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ tasks }) => {
         renderItem={renderMonth}
         initialScrollIndex={12}
         getItemLayout={(_, index) => ({
-          length: 380,
-          offset: 380 * index,
+          length: getMonthHeight(STATIC_MONTHS[index]),
+          offset: MONTH_OFFSETS[index],
           index,
         })}
-        onScrollToIndexFailed={(info) => {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({
-              index: info.index,
-              animated: false,
-            });
-          }, 50);
-        }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
       />
@@ -267,14 +281,16 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   monthContainer: {
-    marginBottom: 16,
+    marginBottom: MONTH_BOTTOM_MARGIN,
   },
   monthTitle: {
     color: "#FFF",
     fontSize: 20,
     fontWeight: "700",
-    marginTop: 16,
-    marginBottom: 8,
+    height: MONTH_TITLE_HEIGHT,
+    lineHeight: MONTH_TITLE_HEIGHT,
+    marginTop: MONTH_TITLE_MARGIN_TOP,
+    marginBottom: MONTH_TITLE_MARGIN_BOTTOM,
     paddingHorizontal: 4,
   },
   monthGrid: {
@@ -282,7 +298,7 @@ const styles = StyleSheet.create({
   },
   weekRow: {
     flexDirection: "row",
-    height: 60,
+    height: WEEK_ROW_HEIGHT,
   },
   dayCell: {
     flex: 1,

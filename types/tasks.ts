@@ -89,3 +89,18 @@ export function formatDisplayDate(dateKey: string): string {
   return `${capitalized}, ${d}`;
 }
 
+const WEEKDAY_NAMES = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+] as const;
+
+export function formatCurrentHeaderDate(d: Date = new Date()): string {
+  return `${WEEKDAY_NAMES[d.getDay()]}, ${d.getDate()}`;
+}
+
+
