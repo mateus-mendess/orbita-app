@@ -33,7 +33,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggle }) => {
           <Ionicons
             name={task.completed ? "checkmark-circle" : "ellipse-outline"}
             size={22}
-            color={task.completed ? "#4A90E2" : "#555"}
+            color={task.completed ? "#FFFFFF" : "#555"}
           />
         </Pressable>
 

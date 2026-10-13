@@ -5,7 +5,7 @@ export type UrgencyLevel =
   | "muito_urgente";
 
 export const URGENCY_CONFIG = {
-  nao_urgente: { label: "Não urgente", color: "#3B82F6", icon: "flag-outline" as const },
+  nao_urgente: { label: "Não urgente", color: "#3B82F6", icon: "flag" as const },
   pouco_urgente: { label: "Pouco urgente", color: "#10B981", icon: "flag" as const },
   urgente: { label: "Urgente", color: "#F59E0B", icon: "flag" as const },
   muito_urgente: { label: "Muito urgente", color: "#EF4444", icon: "flag" as const },
