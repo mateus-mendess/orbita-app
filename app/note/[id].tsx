@@ -404,16 +404,6 @@ export default function NoteEditorScreen() {
                 color={editorState.isTaskListActive ? "#FFF" : "#BBB"}
               />
             </TouchableOpacity>
-
-            <View style={styles.toolDivider} />
-
-            <TouchableOpacity
-              style={styles.toolBtn}
-              onPress={() => Keyboard.dismiss()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chevron-down" size={20} color="#AAA" />
-            </TouchableOpacity>
           </View>
         </View>
       ) : null}
@@ -516,12 +506,6 @@ const styles = StyleSheet.create({
   },
   toolBtnActive: {
     backgroundColor: "#2E2E2E",
-  },
-  toolDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: "#2E2E2E",
-    marginHorizontal: 2,
   },
   boldBtnText: {
     color: "#BBB",
