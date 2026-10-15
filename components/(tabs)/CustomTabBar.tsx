@@ -1,5 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { router } from 'expo-router';
 import React from 'react';
 import {
   LayoutAnimation,
@@ -27,13 +28,17 @@ const TABS: TabConfig[] = [
   { name: 'index', label: 'Dia', iconName: 'calendar-outline' },
   { name: 'wallet', label: 'Carteira', iconName: 'wallet-outline', disabled: true },
   { name: 'notes', label: 'Notas', iconName: 'document-text-outline' },
-  { name: 'target', label: 'Metas', iconName: 'target', isFeather: true, disabled: true },
+  { name: 'target', label: 'Metas', iconName: 'target', isFeather: true, disabled: false },
 ];
 
 export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
   const currentRouteName = state.routes[state.index]?.name || 'index';
 
   const handleTabPress = (tab: TabConfig) => {
+    if (tab.name === 'target') {
+      router.push('/habits' as any);
+      return;
+    }
     if (tab.disabled || tab.name === currentRouteName) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     navigation.navigate(tab.name);
