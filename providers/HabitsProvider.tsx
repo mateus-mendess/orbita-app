@@ -54,7 +54,12 @@ export const HabitsProvider: React.FC<{ children: React.ReactNode }> = ({
   const [habits, setHabits] = useState<Habit[]>(INITIAL_HABITS);
 
   const addHabit = useCallback(
-    (data: { title: string; icon: Habit["icon"]; frequencyDaysPerWeek: number }) => {
+    (data: {
+      title: string;
+      icon: Habit["icon"];
+      frequencyDaysPerWeek: number;
+      daysOfWeek?: number[];
+    }) => {
       setHabits((prev) => [
         {
           ...data,

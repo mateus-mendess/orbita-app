@@ -7,13 +7,19 @@ export interface Habit {
   title: string;
   icon: HabitIconName;
   frequencyDaysPerWeek: number; // 1 a 7 vezes por semana
+  daysOfWeek?: number[]; // [0, 1, 2, 3, 4, 5, 6] onde 0 = Domingo, 6 = Sábado
   completedDates: string[]; // datas no formato YYYY-MM-DD
   createdAt?: string;
 }
 
 export interface HabitsContextData {
   habits: Habit[];
-  addHabit: (habit: Omit<Habit, "id" | "completedDates" | "createdAt">) => void;
+  addHabit: (data: {
+    title: string;
+    icon: HabitIconName;
+    frequencyDaysPerWeek: number;
+    daysOfWeek?: number[];
+  }) => void;
   toggleHabitToday: (id: string) => void;
   isHabitDoneToday: (habit: Habit) => boolean;
   getWeeklyProgress: (habit: Habit) => {

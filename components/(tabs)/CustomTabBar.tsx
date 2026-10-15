@@ -21,14 +21,12 @@ interface TabConfig {
   label: string;
   iconName: string;
   isFeather?: boolean;
-  disabled?: boolean;
 }
 
 const TABS: TabConfig[] = [
   { name: 'index', label: 'Dia', iconName: 'calendar-outline' },
-  { name: 'wallet', label: 'Carteira', iconName: 'wallet-outline', disabled: true },
   { name: 'notes', label: 'Notas', iconName: 'document-text-outline' },
-  { name: 'target', label: 'Metas', iconName: 'target', isFeather: true, disabled: false },
+  { name: 'target', label: 'Metas', iconName: 'target', isFeather: true },
 ];
 
 export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
@@ -39,7 +37,7 @@ export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
       router.push('/habits' as any);
       return;
     }
-    if (tab.disabled || tab.name === currentRouteName) return;
+    if (tab.name === currentRouteName) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     navigation.navigate(tab.name);
   };
@@ -55,7 +53,7 @@ export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
           return (
             <TouchableOpacity
               key={tab.name}
-              activeOpacity={tab.disabled ? 1 : 0.8}
+              activeOpacity={0.8}
               onPress={() => handleTabPress(tab)}
               style={[styles.tabItem, isActive && styles.activeTab]}
             >
@@ -69,11 +67,6 @@ export const CustomTabBar = ({ state, navigation }: BottomTabBarProps) => {
           );
         })}
       </View>
-
-      {/* Botão lateral de Mais */}
-      <TouchableOpacity style={styles.moreButton} activeOpacity={0.8}>
-        <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
-      </TouchableOpacity>
     </View>
   );
 };
@@ -86,7 +79,7 @@ const styles = StyleSheet.create({
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   container: {
     flex: 1,
@@ -94,21 +87,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1E1E',
     borderRadius: 50,
     padding: 6,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginRight: 12,
+    justifyContent: 'space-around',
   },
   tabItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 50,
   },
   activeTab: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   activeText: {
     color: '#000',
@@ -116,13 +109,4 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 14,
   },
-  moreButton: {
-    backgroundColor: '#1E1E1E',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
-

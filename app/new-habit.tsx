@@ -39,35 +39,51 @@ const AVAILABLE_ICONS: HabitIconName[] = [
   "star-outline",
 ];
 
-const FREQUENCY_OPTIONS = [
-  { value: 1, label: "1x" },
-  { value: 2, label: "2x" },
-  { value: 3, label: "3x" },
-  { value: 4, label: "4x" },
-  { value: 5, label: "5x" },
-  { value: 6, label: "6x" },
-  { value: 7, label: "Todos os dias" },
+const DAYS_OF_WEEK = [
+  { id: 0, label: "Dom" },
+  { id: 1, label: "Seg" },
+  { id: 2, label: "Ter" },
+  { id: 3, label: "Qua" },
+  { id: 4, label: "Qui" },
+  { id: 5, label: "Sex" },
+  { id: 6, label: "Sáb" },
 ];
 
 export default function NewHabitScreen() {
   const [title, setTitle] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<HabitIconName>(AVAILABLE_ICONS[0]);
-  const [frequency, setFrequency] = useState(7);
+  const [selectedDays, setSelectedDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [error, setError] = useState<string | null>(null);
 
   const { addHabit } = useHabits();
 
+  const toggleDay = (dayId: number) => {
+    setSelectedDays((prev) =>
+      prev.includes(dayId) ? prev.filter((d) => d !== dayId) : [...prev, dayId].sort((a, b) => a - b)
+    );
+    if (error) setError(null);
+  };
+
   const handleSave = () => {
     if (!title.trim()) {
-      setError("Por favor, digite o título do hábito.");
-      Alert.alert("Campo obrigatório", "Por favor, digite o título do hábito.");
+      const msg = "Por favor, digite o título do hábito.";
+      setError(msg);
+      Alert.alert("Campo obrigatório", msg);
+      return;
+    }
+
+    if (selectedDays.length === 0) {
+      const msg = "Por favor, selecione pelo menos 1 dia da semana.";
+      setError(msg);
+      Alert.alert("Frequência obrigatória", msg);
       return;
     }
 
     addHabit({
       title: title.trim(),
       icon: selectedIcon,
-      frequencyDaysPerWeek: frequency,
+      frequencyDaysPerWeek: selectedDays.length,
+      daysOfWeek: selectedDays,
     });
 
     router.back();
@@ -133,7 +149,7 @@ export default function NewHabitScreen() {
             {error && <Text style={styles.errorText}>{error}</Text>}
           </View>
 
-          {/* Seleção de Ícone (sem cores de fundo) */}
+          {/* Seleção de Ícone */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Selecione um ícone</Text>
             <View style={styles.grid}>
@@ -160,23 +176,23 @@ export default function NewHabitScreen() {
             </View>
           </View>
 
-          {/* Seleção de Frequência Semanal */}
+          {/* Seleção de Frequência Semanal (Dias da semana com seleção múltipla) */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Frequência semanal</Text>
             <Text style={styles.helperText}>
-              Quantas vezes na semana você pretende realizar este hábito?
+              Selecione os dias em que você pretende realizar este hábito:
             </Text>
             <View style={styles.optionsRow}>
-              {FREQUENCY_OPTIONS.map((opt) => {
-                const isSelected = frequency === opt.value;
+              {DAYS_OF_WEEK.map((day) => {
+                const isSelected = selectedDays.includes(day.id);
                 return (
                   <TouchableOpacity
-                    key={opt.value}
+                    key={day.id}
                     style={[
                       styles.chip,
                       isSelected && styles.chipSelected,
                     ]}
-                    onPress={() => setFrequency(opt.value)}
+                    onPress={() => toggleDay(day.id)}
                     activeOpacity={0.7}
                   >
                     <Text
@@ -185,7 +201,7 @@ export default function NewHabitScreen() {
                         isSelected && styles.chipTextSelected,
                       ]}
                     >
-                      {opt.label}
+                      {day.label}
                     </Text>
                   </TouchableOpacity>
                 );

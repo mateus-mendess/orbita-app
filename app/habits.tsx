@@ -171,16 +171,6 @@ export default function HabitsScreen() {
                         onPress={() => handleToggle(habit.id)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons
-                          name={
-                            isDone
-                              ? "checkmark-done-circle"
-                              : "checkmark-circle-outline"
-                          }
-                          size={20}
-                          color={isDone ? "#10B981" : "#000000"}
-                          style={{ marginRight: 8 }}
-                        />
                         <Text
                           style={[
                             styles.markButtonText,
