@@ -113,8 +113,27 @@ const WEEKDAY_NAMES = [
   "Sábado",
 ] as const;
 
+const MONTH_ABBREVIATIONS = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
+] as const;
+
 export function formatCurrentHeaderDate(d: Date = new Date()): string {
-  return `${WEEKDAY_NAMES[d.getDay()]}, ${d.getDate()}`;
+  const day = d.getDate();
+  const month = MONTH_ABBREVIATIONS[d.getMonth()];
+  const year2 = String(d.getFullYear()).slice(-2);
+  const weekday = WEEKDAY_NAMES[d.getDay()];
+  return `${day} ${month}, ${year2} ${weekday}`;
 }
 
 

@@ -39,27 +39,31 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Left Group */}
-      <View style={styles.leftGroup}>
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateText}>{headerDate}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={onToggleView}
-          disabled={!onToggleView}
-          hitSlop={10}
-        >
-          <Ionicons
-            name={viewMode === 'calendar' ? 'calendar-clear-outline' : 'list-outline'}
-            size={24}
-            color="#fff"
-          />
-        </TouchableOpacity>
+      {/* Canto Esquerdo: Alternância de Visão (Lista / Calendário) */}
+      <TouchableOpacity
+        style={styles.circleButton}
+        onPress={onToggleView}
+        disabled={!onToggleView}
+        hitSlop={10}
+      >
+        <Ionicons
+          name={viewMode === 'calendar' ? 'calendar-clear-outline' : 'list-outline'}
+          size={24}
+          color="#fff"
+        />
+      </TouchableOpacity>
+
+      {/* Centro: Container/Chip da Data Atual */}
+      <View style={styles.dateBadge}>
+        <Text style={styles.dateText}>{headerDate}</Text>
       </View>
 
-      {/* Right Add Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => router.push('/new-task')}>
+      {/* Canto Direito: Botão Adicionar "+" */}
+      <TouchableOpacity
+        style={styles.circleButton}
+        onPress={() => router.push('/new-task')}
+        hitSlop={10}
+      >
         <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>
     </View>
@@ -74,35 +78,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 16,
   },
-  leftGroup: {
-    flexDirection: 'row',
+  circleButton: {
+    backgroundColor: '#1E1E1E',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: '#333',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   dateBadge: {
     backgroundColor: '#1E1E1E',
     borderRadius: 50,
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: '#333',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
   },
-  toggleButton: {
-    marginLeft: 12,
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButton: {
-    backgroundColor: '#1E1E1E',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
 });
