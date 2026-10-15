@@ -157,6 +157,8 @@ export const DaySheet: React.FC<DaySheetProps> = ({
                 <TaskPeriodSection
                   key={key}
                   label={PERIOD_CONFIG[key].label}
+                  icon={PERIOD_CONFIG[key].icon}
+                  iconColor={PERIOD_CONFIG[key].color}
                   tasks={dayTasks.filter((t) => getTaskPeriod(t.startTime) === key)}
                   onToggleTask={toggleTask}
                 />

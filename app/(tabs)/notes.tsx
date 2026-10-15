@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { CreateNoteSheet } from "../../components/notes/CreateNoteSheet";
 import { NoteCard } from "../../components/notes/NoteCard";
+import { SectionHeader } from "../../components/shared/SectionHeader";
 import { THEME_COLORS } from "../../constants/theme";
 import { useNotes } from "../../hooks/useNotes";
 import { CATEGORY_CONFIG, CategoryKey } from "../../types/categories";
@@ -76,12 +77,10 @@ export default function NotesScreen() {
 
             return (
               <View key={catKey} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>
-                    {CATEGORY_CONFIG[catKey].label}
-                  </Text>
-                  <Text style={styles.sectionCount}>· {catNotes.length}</Text>
-                </View>
+                <SectionHeader
+                  title={CATEGORY_CONFIG[catKey].label}
+                  count={catNotes.length}
+                />
 
                 {catNotes.map((note) => (
                   <NoteCard
@@ -150,25 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 6,
-    paddingHorizontal: 2,
-  },
-  sectionTitle: {
-    color: "#888",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  sectionCount: {
-    color: "#666",
-    fontSize: 13,
-    marginLeft: 6,
-    fontWeight: "500",
+    marginBottom: 26,
   },
   emptyContainer: {
     alignItems: "center",

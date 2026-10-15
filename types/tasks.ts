@@ -16,10 +16,29 @@ export * from "./categories";
 
 export type PeriodId = "morning" | "afternoon" | "night";
 
-export const PERIOD_CONFIG: Record<PeriodId, { label: string }> = {
-  morning: { label: "Manhã" },
-  afternoon: { label: "Tarde" },
-  night: { label: "Noite" },
+export const PERIOD_CONFIG: Record<
+  PeriodId,
+  {
+    label: string;
+    color: string;
+    icon: "sunny-outline" | "cloud-outline" | "moon-outline";
+  }
+> = {
+  morning: {
+    label: "Manhã",
+    color: "#F97316",
+    icon: "sunny-outline",
+  },
+  afternoon: {
+    label: "Tarde",
+    color: "#38BDF8",
+    icon: "cloud-outline",
+  },
+  night: {
+    label: "Noite",
+    color: "#A855F7",
+    icon: "moon-outline",
+  },
 };
 
 export interface Task {

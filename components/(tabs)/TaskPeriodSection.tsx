@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { SectionHeader } from "../shared/SectionHeader";
 import { Task } from "../../types/tasks";
 import { TaskCard } from "./TaskCard";
 
@@ -7,12 +9,16 @@ interface TaskPeriodSectionProps {
   label: string;
   tasks: Task[];
   onToggleTask: (id: string) => void;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
 }
 
 export const TaskPeriodSection: React.FC<TaskPeriodSectionProps> = ({
   label,
   tasks,
   onToggleTask,
+  icon,
+  iconColor,
 }) => {
   if (tasks.length === 0) return null;
 
@@ -22,10 +28,12 @@ export const TaskPeriodSection: React.FC<TaskPeriodSectionProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{label}</Text>
-        <Text style={styles.count}>· {tasks.length}</Text>
-      </View>
+      <SectionHeader
+        title={label}
+        count={tasks.length}
+        icon={icon}
+        iconColor={iconColor}
+      />
       {sortedTasks.map((task) => (
         <TaskCard key={task.id} task={task} onToggle={onToggleTask} />
       ))}
@@ -35,24 +43,6 @@ export const TaskPeriodSection: React.FC<TaskPeriodSectionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 6,
-    paddingHorizontal: 2,
-  },
-  title: {
-    color: "#888",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  count: {
-    color: "#666",
-    fontSize: 13,
-    marginLeft: 6,
-    fontWeight: "500",
+    marginBottom: 26,
   },
 });
