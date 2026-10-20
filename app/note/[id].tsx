@@ -9,7 +9,7 @@ import {
 } from "@10play/tentap-editor";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   AppState,
@@ -126,8 +126,10 @@ export default function NoteEditorScreen() {
 
   const note = getNoteById(id || "");
 
+  const titleInputRef = useRef<TextInput>(null);
   const [title, setTitle] = useState(note?.title || "");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isTitleFocused, setIsTitleFocused] = useState(false);
 
   // Monitora abertura/fechamento do teclado
   useEffect(() => {
@@ -144,6 +146,14 @@ export default function NoteEditorScreen() {
       hideSub.remove();
     };
   }, []);
+
+  const handleDismissKeyboard = () => {
+    Keyboard.dismiss();
+    editor.blur();
+    titleInputRef.current?.blur();
+    setIsTitleFocused(false);
+    setKeyboardVisible(false);
+  };
 
   // Migra notas legadas salvas em markdown para HTML na primeira abertura
   const initialHtml = useMemo(() => {
@@ -263,6 +273,7 @@ export default function NoteEditorScreen() {
   const categoryLabel = CATEGORY_CONFIG[note.category]?.label || "Geral";
   const dateLabel = formatNoteDate(note.createdAt);
   const hasContent = Boolean(title.trim() || note.content.trim());
+  const isInputActive = keyboardVisible || isTitleFocused || !!editorState?.isFocused;
 
   return (
     <KeyboardAvoidingView
@@ -322,18 +333,34 @@ export default function NoteEditorScreen() {
           >
             <Ionicons name="trash-outline" size={24} color="#EF4444" />
           </TouchableOpacity>
+
+          {/* Botão Concluído / Check para fechar teclado */}
+          {isInputActive && (
+            <TouchableOpacity
+              onPress={handleDismissKeyboard}
+              hitSlop={8}
+              style={styles.headerDoneBtn}
+              activeOpacity={0.7}
+              accessibilityLabel="Concluído"
+            >
+              <Ionicons name="checkmark" size={24} color="#000000" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* Título e Metadados Nativos */}
       <View style={styles.metaContainer}>
         <TextInput
+          ref={titleInputRef}
           style={styles.titleInput}
           value={title}
           onChangeText={handleTitleChange}
           placeholder="Título"
           placeholderTextColor="#555"
           multiline
+          onFocus={() => setIsTitleFocused(true)}
+          onBlur={() => setIsTitleFocused(false)}
         />
         <Text style={styles.subtitle}>
           {categoryLabel} · Criada em {dateLabel}
@@ -445,6 +472,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#1E1E1E",
     borderWidth: 1,
     borderColor: "#2E2E2E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerDoneBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
