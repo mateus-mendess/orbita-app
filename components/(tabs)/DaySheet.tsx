@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef } from "react";
+import { router } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -16,10 +17,12 @@ import { useTasks } from "../../hooks/useTasks";
 import {
   PERIOD_CONFIG,
   PeriodId,
+  Task,
   formatDisplayDate,
   getTaskPeriod,
   toDateKey,
 } from "../../types/tasks";
+import { DeleteTaskModal } from "./DeleteTaskModal";
 import { TaskPeriodSection } from "./TaskPeriodSection";
 
 interface DaySheetProps {
@@ -37,7 +40,8 @@ export const DaySheet: React.FC<DaySheetProps> = ({
   dateKey,
   onClose,
 }) => {
-  const { tasks, toggleTask } = useTasks();
+  const { tasks, toggleTask, deleteTask } = useTasks();
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -161,6 +165,11 @@ export const DaySheet: React.FC<DaySheetProps> = ({
                   iconColor={PERIOD_CONFIG[key].color}
                   tasks={dayTasks.filter((t) => getTaskPeriod(t.startTime) === key)}
                   onToggleTask={toggleTask}
+                  onEdit={(t) => {
+                    onClose();
+                    router.push({ pathname: "/new-task" as any, params: { taskId: t.id } });
+                  }}
+                  onDelete={(t) => setTaskToDelete(t)}
                 />
               ))
             ) : (
@@ -175,6 +184,18 @@ export const DaySheet: React.FC<DaySheetProps> = ({
               </View>
             )}
           </ScrollView>
+
+          <DeleteTaskModal
+            task={taskToDelete}
+            visible={!!taskToDelete}
+            onClose={() => setTaskToDelete(null)}
+            onConfirm={() => {
+              if (taskToDelete) {
+                deleteTask(taskToDelete.id);
+                setTaskToDelete(null);
+              }
+            }}
+          />
         </Animated.View>
       </View>
     </Modal>

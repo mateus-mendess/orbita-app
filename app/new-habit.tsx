@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -50,12 +50,22 @@ const DAYS_OF_WEEK = [
 ];
 
 export default function NewHabitScreen() {
-  const [title, setTitle] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState<HabitIconName>(AVAILABLE_ICONS[0]);
-  const [selectedDays, setSelectedDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
-  const [error, setError] = useState<string | null>(null);
+  const { habitId } = useLocalSearchParams<{ habitId?: string }>();
+  const { habits, addHabit, updateHabit } = useHabits();
 
-  const { addHabit } = useHabits();
+  const existingHabit = habitId ? habits.find((h) => h.id === habitId) : null;
+  const isEditing = Boolean(existingHabit);
+
+  const [title, setTitle] = useState(existingHabit ? existingHabit.title : "");
+  const [selectedIcon, setSelectedIcon] = useState<HabitIconName>(
+    existingHabit ? existingHabit.icon : AVAILABLE_ICONS[0]
+  );
+  const [selectedDays, setSelectedDays] = useState<number[]>(
+    existingHabit?.daysOfWeek && existingHabit.daysOfWeek.length > 0
+      ? existingHabit.daysOfWeek
+      : [0, 1, 2, 3, 4, 5, 6]
+  );
+  const [error, setError] = useState<string | null>(null);
 
   const toggleDay = (dayId: number) => {
     setSelectedDays((prev) =>
@@ -79,12 +89,21 @@ export default function NewHabitScreen() {
       return;
     }
 
-    addHabit({
-      title: title.trim(),
-      icon: selectedIcon,
-      frequencyDaysPerWeek: selectedDays.length,
-      daysOfWeek: selectedDays,
-    });
+    if (isEditing && existingHabit) {
+      updateHabit(existingHabit.id, {
+        title: title.trim(),
+        icon: selectedIcon,
+        frequencyDaysPerWeek: selectedDays.length,
+        daysOfWeek: selectedDays,
+      });
+    } else {
+      addHabit({
+        title: title.trim(),
+        icon: selectedIcon,
+        frequencyDaysPerWeek: selectedDays.length,
+        daysOfWeek: selectedDays,
+      });
+    }
 
     router.back();
   };
@@ -109,7 +128,9 @@ export default function NewHabitScreen() {
               <Ionicons name="close" size={22} color="#888" />
             </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>Novo Hábito</Text>
+            <Text style={styles.headerTitle}>
+              {isEditing ? "Editar Hábito" : "Novo Hábito"}
+            </Text>
 
             <TouchableOpacity
               style={styles.saveCheckButton}
@@ -212,7 +233,10 @@ export default function NewHabitScreen() {
           <View style={{ height: 16 }} />
 
           {/* Botão Salvar Primário */}
-          <PrimaryButton title="Cadastrar Hábito" onPress={handleSave} />
+          <PrimaryButton
+            title={isEditing ? "Salvar alterações" : "Cadastrar Hábito"}
+            onPress={handleSave}
+          />
 
           <View style={{ height: 28 }} />
         </ScrollView>

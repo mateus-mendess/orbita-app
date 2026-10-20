@@ -20,6 +20,8 @@ export interface HabitsContextData {
     frequencyDaysPerWeek: number;
     daysOfWeek?: number[];
   }) => void;
+  updateHabit: (id: string, data: Partial<Omit<Habit, "id">>) => void;
+  deleteHabit: (id: string) => void;
   toggleHabitToday: (id: string) => void;
   isHabitDoneToday: (habit: Habit) => boolean;
   getWeeklyProgress: (habit: Habit) => {

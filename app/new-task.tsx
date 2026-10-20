@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -37,6 +37,24 @@ if (
 const pad = (n: number) => String(n).padStart(2, "0");
 const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
+const parseTaskDate = (dStr?: string) => {
+  if (!dStr) return new Date();
+  const [y, m, d] = dStr.split("-").map(Number);
+  if (y && m && d) return new Date(y, m - 1, d);
+  return new Date();
+};
+
+const parseTaskTime = (tStr?: string, defaultOffsetHours = 0) => {
+  const d = new Date();
+  if (tStr && tStr.includes(":")) {
+    const [h, m] = tStr.split(":").map(Number);
+    d.setHours(h, m, 0, 0);
+  } else {
+    d.setHours(d.getHours() + defaultOffsetHours, 0, 0, 0);
+  }
+  return d;
+};
+
 const URGENCY_OPTIONS = (Object.keys(URGENCY_CONFIG) as UrgencyLevel[]).map(
   (k) => ({ key: k, ...URGENCY_CONFIG[k] })
 );
@@ -46,25 +64,31 @@ const CATEGORY_OPTIONS = (Object.keys(CATEGORY_CONFIG) as CategoryKey[]).map(
 );
 
 export default function NewTask() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(() => {
-    const d = new Date();
-    d.setMinutes(0, 0, 0);
-    return d;
-  });
-  const [endTime, setEndTime] = useState(() => {
-    const d = new Date();
-    d.setHours(d.getHours() + 1, 0, 0, 0);
-    return d;
-  });
-  const [urgency, setUrgency] = useState<UrgencyLevel>("nao_urgente");
-  const [category, setCategory] = useState<CategoryKey>("pessoal");
+  const { taskId } = useLocalSearchParams<{ taskId?: string }>();
+  const { tasks, addTask, updateTask } = useTasks();
+
+  const existingTask = taskId ? tasks.find((t) => t.id === taskId) : null;
+  const isEditing = Boolean(existingTask);
+
+  const [title, setTitle] = useState(existingTask ? existingTask.title : "");
+  const [description, setDescription] = useState(
+    existingTask?.description || ""
+  );
+  const [date, setDate] = useState(() => parseTaskDate(existingTask?.date));
+  const [startTime, setStartTime] = useState(() =>
+    parseTaskTime(existingTask?.startTime, 0)
+  );
+  const [endTime, setEndTime] = useState(() =>
+    parseTaskTime(existingTask?.endTime, 1)
+  );
+  const [urgency, setUrgency] = useState<UrgencyLevel>(
+    existingTask?.urgency || "nao_urgente"
+  );
+  const [category, setCategory] = useState<CategoryKey>(
+    existingTask?.category || "pessoal"
+  );
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const { addTask } = useTasks();
 
   const toggle = (section: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -85,20 +109,37 @@ export default function NewTask() {
       return;
     }
 
-    addTask({
-      title: title.trim(),
-      description: description.trim(),
-      date: toDateKey(date),
-      startTime: formatTime(startTime),
-      endTime: formatTime(endTime),
-      urgency,
-      category,
-    });
+    if (isEditing && existingTask) {
+      updateTask(existingTask.id, {
+        title: title.trim(),
+        description: description.trim(),
+        date: toDateKey(date),
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        urgency,
+        category,
+      });
+    } else {
+      addTask({
+        title: title.trim(),
+        description: description.trim(),
+        date: toDateKey(date),
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        urgency,
+        category,
+      });
+    }
     router.back();
   };
 
   const renderChips = <T extends string>(
-    options: { key: T; label: string; color: string; icon: keyof typeof Ionicons.glyphMap }[],
+    options: {
+      key: T;
+      label: string;
+      color: string;
+      icon: keyof typeof Ionicons.glyphMap;
+    }[],
     selected: T,
     onSelect: (val: T) => void
   ) => (
@@ -108,14 +149,30 @@ export default function NewTask() {
         return (
           <Pressable
             key={opt.key}
-            style={[styles.chip, active && { borderColor: opt.color, backgroundColor: "rgba(255,255,255,0.06)" }]}
+            style={[
+              styles.chip,
+              active && {
+                borderColor: opt.color,
+                backgroundColor: "rgba(255,255,255,0.06)",
+              },
+            ]}
             onPress={() => {
               onSelect(opt.key);
               setOpenSection(null);
             }}
           >
-            <Ionicons name={opt.icon} size={15} color={opt.color} style={{ marginRight: 6 }} />
-            <Text style={[styles.chipText, active && { color: opt.color, fontWeight: "700" }]}>
+            <Ionicons
+              name={opt.icon}
+              size={15}
+              color={opt.color}
+              style={{ marginRight: 6 }}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                active && { color: opt.color, fontWeight: "700" },
+              ]}
+            >
               {opt.label}
             </Text>
           </Pressable>
@@ -129,7 +186,7 @@ export default function NewTask() {
       <Pressable style={styles.backdrop} onPress={() => router.back()} />
 
       <View style={styles.sheet}>
-        <ModalHeader title="Nova Tarefa" />
+        <ModalHeader title={isEditing ? "Editar Tarefa" : "Nova Tarefa"} />
 
         <ScrollView contentContainerStyle={styles.scroll}>
           <AuthInput
@@ -157,7 +214,11 @@ export default function NewTask() {
           <FieldRow
             iconName="calendar-outline"
             label="Data"
-            value={date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+            value={date.toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
             isExpanded={openSection === "date"}
             onPress={() => toggle("date")}
           >
@@ -222,7 +283,7 @@ export default function NewTask() {
 
           <FieldRow
             iconName="flag-outline"
-            label="Nível de urgência"
+            label="Urgência"
             value={URGENCY_CONFIG[urgency].label}
             isExpanded={openSection === "urgency"}
             onPress={() => toggle("urgency")}
@@ -242,13 +303,21 @@ export default function NewTask() {
 
           {error ? (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle-outline" size={16} color="#FF4D4D" style={{ marginRight: 6 }} />
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color="#FF4D4D"
+                style={{ marginRight: 6 }}
+              />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
           <View style={{ marginTop: 20, marginBottom: 16 }}>
-            <PrimaryButton title="Salvar tarefa" onPress={handleSave} />
+            <PrimaryButton
+              title={isEditing ? "Salvar alterações" : "Salvar tarefa"}
+              onPress={handleSave}
+            />
           </View>
         </ScrollView>
       </View>

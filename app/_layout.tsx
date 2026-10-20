@@ -1,6 +1,7 @@
 import { DarkTheme, Stack, ThemeProvider } from "expo-router";
 import * as SystemUI from "expo-system-ui";
 import React, { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { THEME_COLORS } from "../constants/theme";
 import { HabitsProvider } from "../providers/HabitsProvider";
 import { NotesProvider } from "../providers/NotesProvider";
@@ -21,54 +22,56 @@ export default function Layout() {
   }, []);
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <TasksProvider>
-        <NotesProvider>
-          <HabitsProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: THEME_COLORS.background },
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen
-                name="new-task"
-                options={{
-                  presentation: "transparentModal",
-                  animation: "slide_from_bottom",
-                  contentStyle: { backgroundColor: "transparent" },
-                }}
-              />
-              <Stack.Screen
-                name="habits"
-                options={{
-                  presentation: "transparentModal",
-                  animation: "slide_from_bottom",
-                  contentStyle: { backgroundColor: "transparent" },
-                }}
-              />
-              <Stack.Screen
-                name="new-habit"
-                options={{
-                  presentation: "transparentModal",
-                  animation: "slide_from_bottom",
-                  contentStyle: { backgroundColor: "transparent" },
-                }}
-              />
-              <Stack.Screen
-                name="note/[id]"
-                options={{
-                  animation: "slide_from_right",
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <TasksProvider>
+          <NotesProvider>
+            <HabitsProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
                   contentStyle: { backgroundColor: THEME_COLORS.background },
                 }}
-              />
-            </Stack>
-          </HabitsProvider>
-        </NotesProvider>
-      </TasksProvider>
-    </ThemeProvider>
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen
+                  name="new-task"
+                  options={{
+                    presentation: "transparentModal",
+                    animation: "slide_from_bottom",
+                    contentStyle: { backgroundColor: "transparent" },
+                  }}
+                />
+                <Stack.Screen
+                  name="habits"
+                  options={{
+                    presentation: "transparentModal",
+                    animation: "slide_from_bottom",
+                    contentStyle: { backgroundColor: "transparent" },
+                  }}
+                />
+                <Stack.Screen
+                  name="new-habit"
+                  options={{
+                    presentation: "transparentModal",
+                    animation: "slide_from_bottom",
+                    contentStyle: { backgroundColor: "transparent" },
+                  }}
+                />
+                <Stack.Screen
+                  name="note/[id]"
+                  options={{
+                    animation: "slide_from_right",
+                    contentStyle: { backgroundColor: THEME_COLORS.background },
+                  }}
+                />
+              </Stack>
+            </HabitsProvider>
+          </NotesProvider>
+        </TasksProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

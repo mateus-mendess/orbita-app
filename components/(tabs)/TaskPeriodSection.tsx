@@ -9,6 +9,8 @@ interface TaskPeriodSectionProps {
   label: string;
   tasks: Task[];
   onToggleTask: (id: string) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
   icon?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
 }
@@ -17,6 +19,8 @@ export const TaskPeriodSection: React.FC<TaskPeriodSectionProps> = ({
   label,
   tasks,
   onToggleTask,
+  onEdit,
+  onDelete,
   icon,
   iconColor,
 }) => {
@@ -35,7 +39,13 @@ export const TaskPeriodSection: React.FC<TaskPeriodSectionProps> = ({
         iconColor={iconColor}
       />
       {sortedTasks.map((task) => (
-        <TaskCard key={task.id} task={task} onToggle={onToggleTask} />
+        <TaskCard
+          key={task.id}
+          task={task}
+          onToggle={onToggleTask}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       ))}
     </View>
   );

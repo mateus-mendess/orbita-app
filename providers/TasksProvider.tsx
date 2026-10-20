@@ -4,6 +4,8 @@ import { Task, toDateKey } from "../types/tasks";
 interface TasksContextData {
   tasks: Task[];
   addTask: (task: Omit<Task, "id" | "completed">) => void;
+  updateTask: (id: string, data: Partial<Omit<Task, "id">>) => void;
+  deleteTask: (id: string) => void;
   toggleTask: (id: string) => void;
 }
 
@@ -42,6 +44,16 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({
     setTasks((prev) => [{ ...data, id: String(Date.now()), completed: false }, ...prev]);
   }, []);
 
+  const updateTask = useCallback((id: string, data: Partial<Omit<Task, "id">>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...data } : t))
+    );
+  }, []);
+
+  const deleteTask = useCallback((id: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const toggleTask = useCallback((id: string) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
@@ -49,11 +61,12 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <TasksContext.Provider value={{ tasks, addTask, toggleTask }}>
+    <TasksContext.Provider
+      value={{ tasks, addTask, updateTask, deleteTask, toggleTask }}
+    >
       {children}
     </TasksContext.Provider>
   );
 };
 
 export const useTasks = () => useContext(TasksContext);
-

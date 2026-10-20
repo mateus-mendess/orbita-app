@@ -72,6 +72,19 @@ export const HabitsProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
 
+  const updateHabit = useCallback(
+    (id: string, data: Partial<Omit<Habit, "id">>) => {
+      setHabits((prev) =>
+        prev.map((h) => (h.id === id ? { ...h, ...data } : h))
+      );
+    },
+    []
+  );
+
+  const deleteHabit = useCallback((id: string) => {
+    setHabits((prev) => prev.filter((h) => h.id !== id));
+  }, []);
+
   const isHabitDoneToday = useCallback((habit: Habit) => {
     return habit.completedDates.includes(toDateKey(new Date()));
   }, []);
@@ -116,6 +129,8 @@ export const HabitsProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         habits,
         addHabit,
+        updateHabit,
+        deleteHabit,
         toggleHabitToday,
         isHabitDoneToday,
         getWeeklyProgress,
